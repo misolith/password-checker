@@ -89,6 +89,7 @@ The debug page lets you:
 - toggle active languages (`fi`, `en`)
 - test analyzer output in real time
 - run quick bloom hit checks for sample words
+- toggle optional HIBP checks and inspect returned status/count/error
 
 ---
 

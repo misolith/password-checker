@@ -19,6 +19,7 @@
   <div class="row">
     <label><input type="checkbox" id="lang-fi" checked /> fi</label>
     <label><input type="checkbox" id="lang-en" checked /> en</label>
+    <label><input type="checkbox" id="hibp-enabled" /> HIBP</label>
   </div>
 
   <p><input id="pw" placeholder="Try e.g. passwordaurinko or lintulentää" /></p>
@@ -28,6 +29,9 @@
 
   <h3>Matched words/parts</h3>
   <pre id="matches"></pre>
+
+  <h3>HIBP result</h3>
+  <pre id="hibp"></pre>
 
   <h3>Bloom quick checks</h3>
   <pre id="checks"></pre>
@@ -48,8 +52,10 @@
     const resultEl = document.getElementById('result');
     const checksEl = document.getElementById('checks');
     const matchesEl = document.getElementById('matches');
+    const hibpEl = document.getElementById('hibp');
     const fiEl = document.getElementById('lang-fi');
     const enEl = document.getElementById('lang-en');
+    const hibpToggle = document.getElementById('hibp-enabled');
 
     function selectedLangs() {
       const langs = [];
@@ -58,12 +64,25 @@
       return langs.length ? langs : [bloom.defaultLanguage || 'en'];
     }
 
-    function render() {
+    async function render() {
       const pw = pwEl.value || '';
       const langs = selectedLangs();
       core.setActiveLanguages(langs);
 
-      const r = core.analyze(pw, { languages: langs });
+      const hibpEnabled = !!hibpToggle.checked;
+      let r;
+      if (hibpEnabled) {
+        try {
+          r = await core.analyzeAsync(pw, { languages: langs, hibp: { enabled: true } });
+        } catch (err) {
+          r = core.analyze(pw, { languages: langs });
+          r.hibp = { enabled: true, error: String(err) };
+        }
+      } else {
+        r = core.analyze(pw, { languages: langs });
+        r.hibp = { enabled: false, pwned: false };
+      }
+
       resultEl.textContent = JSON.stringify(r, null, 2);
 
       const parts = r.matchedParts || [];
@@ -71,14 +90,17 @@
         ? parts.map((m, i) => `${i + 1}. ${m.part} (start=${m.start}, len=${m.len})`).join('\n')
         : 'No matched parts.';
 
+      hibpEl.textContent = JSON.stringify(r.hibp || { enabled: false }, null, 2);
+
       const testWords = ['lintu','lentää','password','traffic','qwerty','zzzxxy'];
       const lines = testWords.map(w => `${w}: ${core.checkBloom(w, { languages: langs })}`);
       checksEl.textContent = lines.join('\n');
     }
 
-    pwEl.addEventListener('input', render);
-    fiEl.addEventListener('change', render);
-    enEl.addEventListener('change', render);
+    pwEl.addEventListener('input', () => { render(); });
+    fiEl.addEventListener('change', () => { render(); });
+    enEl.addEventListener('change', () => { render(); });
+    hibpToggle.addEventListener('change', () => { render(); });
     render();
   </script>
 </body>

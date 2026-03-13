@@ -100,11 +100,12 @@ import bloom from './fixtures/blooms.generated.json' assert { type: 'json' };
 
 const core = new PasswordDefenseCore({
   defaultLanguage: bloom.defaultLanguage,
+  locale: 'en', // or 'fi'
   languages: bloom.languages,
   activeLanguages: ['fi', 'en']
 });
 
-const result = core.analyze('passwordaurinko');
+const result = core.analyze('passwordaurinko', { locale: 'fi' });
 console.log(result);
 
 const hit = core.checkBloom('lintu', { languages: ['fi'] });

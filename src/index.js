@@ -1,6 +1,28 @@
+const I18N = {
+  fi: {
+    labels: { weak: 'Heikko', moderate: 'Kohtalainen', strong: 'Vahva', dangerous: 'VAARALLINEN' },
+    tips: {
+      empty: 'Kirjoita salasana arvioitavaksi.',
+      repetition: 'Salasana sisältää paljon toistoa tai vähän eri merkkejä.',
+      sequence: 'Vältä näppäimistö- tai numerojärjestyksiä.'
+    },
+    errors: { noDecoder: 'Base64-dekooderia ei löytynyt tästä ajoympäristöstä.' }
+  },
+  en: {
+    labels: { weak: 'Weak', moderate: 'Moderate', strong: 'Strong', dangerous: 'DANGEROUS' },
+    tips: {
+      empty: 'Enter a password to analyze.',
+      repetition: 'Password contains heavy repetition or too few unique characters.',
+      sequence: 'Avoid keyboard patterns and number sequences.'
+    },
+    errors: { noDecoder: 'No base64 decoder available in this runtime.' }
+  }
+};
+
 export class PasswordDefenseCore {
   constructor(cfg = {}) {
     this.defaultLanguage = cfg.defaultLanguage || 'en';
+    this.locale = cfg.locale || 'en';
     this.activeLanguages = cfg.activeLanguages || [this.defaultLanguage];
     this.languages = cfg.languages || cfg.blooms || {};
     this.state = {};
@@ -14,6 +36,15 @@ export class PasswordDefenseCore {
         data: typeof lc.data === 'string' ? lc.data : ''
       };
     }
+  }
+
+  t(path) {
+    const dict = I18N[this.locale] || I18N.en;
+    return path.split('.').reduce((acc, k) => (acc && acc[k] !== undefined ? acc[k] : null), dict) || path;
+  }
+
+  setLocale(locale = 'en') {
+    this.locale = I18N[locale] ? locale : 'en';
   }
 
   setActiveLanguages(languages = []) {
@@ -43,7 +74,7 @@ export class PasswordDefenseCore {
       return out;
     }
 
-    throw new Error('No base64 decoder available in this runtime');
+    throw new Error(this.t('errors.noDecoder'));
   }
 
   ensureBloomLoaded(lang) {
@@ -101,7 +132,8 @@ export class PasswordDefenseCore {
   }
 
   analyze(pw, options = {}) {
-    if (!pw) return { score: 0, label: 'Heikko', tips: ['Kirjoita salasana arvioitavaksi.'] };
+    if (options.locale) this.setLocale(options.locale);
+    if (!pw) return { score: 0, label: this.t('labels.weak'), tips: [this.t('tips.empty')] };
 
     let charsetSize = 0;
     if (/[a-z]/.test(pw)) charsetSize += 26;
@@ -117,12 +149,12 @@ export class PasswordDefenseCore {
       const ratio = uniqueChars / pw.length;
       if (ratio <= 0.6) {
         penalty += Math.round((1 - ratio) * 80);
-        tips.push('Salasana sisältää paljon toistoa tai vähän eri merkkejä.');
+        tips.push(this.t('tips.repetition'));
       }
     }
     if (/(123|abc|qwe|asd|zxc|321|cba|ewq)/i.test(pw)) {
       penalty += 20;
-      tips.push('Vältä näppäimistö- tai numerojärjestyksiä.');
+      tips.push(this.t('tips.sequence'));
     }
 
     let dictionaryMatches = 0;
@@ -147,10 +179,10 @@ export class PasswordDefenseCore {
     else if (dictionaryMatches > 2) penalty += 15;
 
     const finalScore = Math.max(0, Math.min(100, Math.round(score - penalty)));
-    let label = 'Heikko';
-    if (finalScore >= 80) label = 'Vahva';
-    else if (finalScore >= 50) label = 'Kohtalainen';
-    if (finalScore === 0 && penalty >= 50) label = 'VAARALLINEN';
+    let label = this.t('labels.weak');
+    if (finalScore >= 80) label = this.t('labels.strong');
+    else if (finalScore >= 50) label = this.t('labels.moderate');
+    if (finalScore === 0 && penalty >= 50) label = this.t('labels.dangerous');
 
     return { score: finalScore, label, tips, matches: dictionaryMatches, languages: langs };
   }

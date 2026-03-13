@@ -1,0 +1,18 @@
+{
+  "defaultLanguage": "en",
+  "defaults": {
+    "size": 120000,
+    "hashes": 7,
+    "minTokenLength": 3
+  },
+  "languages": {
+    "en": {
+      "input": "wordlists/en.txt"
+    },
+    "fi": {
+      "input": "wordlists/fi.txt",
+      "minTokenLength": 3
+    }
+  },
+  "output": "fixtures/blooms.generated.json"
+}

@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>password-defense-core debug</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 900px; margin: 24px auto; padding: 0 16px; }
+    input { width: 100%; padding: 10px; font-size: 16px; }
+    pre { background: #111; color: #d7ffd7; padding: 12px; border-radius: 8px; overflow: auto; }
+    .row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+    code { background:#eee; padding:2px 4px; border-radius:4px; }
+  </style>
+</head>
+<body>
+  <h1>🧪 password-defense-core debug</h1>
+  <p>Local debug UI for multilingual bloom + analyzer.</p>
+
+  <div class="row">
+    <label><input type="checkbox" id="lang-fi" checked /> fi</label>
+    <label><input type="checkbox" id="lang-en" checked /> en</label>
+  </div>
+
+  <p><input id="pw" placeholder="Try e.g. passwordaurinko or lintulentää" /></p>
+
+  <h3>Analyze result</h3>
+  <pre id="result"></pre>
+
+  <h3>Bloom quick checks</h3>
+  <pre id="checks"></pre>
+
+  <p>Run locally with: <code>npm run debug</code> then open this page.</p>
+
+  <script type="module">
+    import { PasswordDefenseCore } from '../src/index.js';
+
+    const bloom = await fetch('../fixtures/blooms.generated.json').then(r => r.json());
+    const core = new PasswordDefenseCore({
+      defaultLanguage: bloom.defaultLanguage,
+      languages: bloom.languages,
+      activeLanguages: ['fi','en']
+    });
+
+    const pwEl = document.getElementById('pw');
+    const resultEl = document.getElementById('result');
+    const checksEl = document.getElementById('checks');
+    const fiEl = document.getElementById('lang-fi');
+    const enEl = document.getElementById('lang-en');
+
+    function selectedLangs() {
+      const langs = [];
+      if (fiEl.checked) langs.push('fi');
+      if (enEl.checked) langs.push('en');
+      return langs.length ? langs : [bloom.defaultLanguage || 'en'];
+    }
+
+    function render() {
+      const pw = pwEl.value || '';
+      const langs = selectedLangs();
+      core.setActiveLanguages(langs);
+
+      const r = core.analyze(pw, { languages: langs });
+      resultEl.textContent = JSON.stringify(r, null, 2);
+
+      const testWords = ['lintu','lentää','password','traffic','qwerty','zzzxxy'];
+      const lines = testWords.map(w => `${w}: ${core.checkBloom(w, { languages: langs })}`);
+      checksEl.textContent = lines.join('\n');
+    }
+
+    pwEl.addEventListener('input', render);
+    fiEl.addEventListener('change', render);
+    enEl.addEventListener('change', render);
+    render();
+  </script>
+</body>
+</html>

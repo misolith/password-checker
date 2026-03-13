@@ -1,0 +1,14 @@
+{
+  "name": "password-defense-core",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Standalone password analysis core extracted from sec-guide",
+  "type": "module",
+  "main": "src/index.js",
+  "scripts": {
+    "build:bloom": "node scripts/build-bloom.js",
+    "test": "node test/smoke.js",
+    "debug": "python3 -m http.server 4173"
+  },
+  "license": "MIT"
+}

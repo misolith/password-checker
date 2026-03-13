@@ -1,0 +1,12 @@
+password
+welcome
+admin
+qwerty
+dragon
+football
+summer
+winter
+security
+hunter
+shadow
+master

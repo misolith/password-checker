@@ -1,0 +1,16 @@
+# dependencies
+node_modules/
+
+# build/runtime artifacts
+*.log
+.DS_Store
+
+# local env / editor
+.env
+.env.*
+.vscode/
+.idea/
+
+# optional local outputs
+coverage/
+dist/

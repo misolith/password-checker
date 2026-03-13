@@ -218,6 +218,10 @@ core.setActiveLanguages(['fi', 'en', '<lang>']);
 
 ---
 
+## Publish notes
+
+See `PUBLISHING.md` for the release checklist (`npm version` + `npm publish --access public`).
+
 ## NPM scripts
 
 - `npm run build:bloom` → generate `fixtures/blooms.generated.json`

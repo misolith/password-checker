@@ -1,14 +1,43 @@
 {
-  "name": "password-checker",
+  "name": "@misolith/password-checker",
   "version": "0.1.0",
-  "private": true,
-  "description": "Standalone multilingual password analysis core",
+  "description": "Multilingual password analysis with Bloom filtering and optional HIBP checks",
   "type": "module",
   "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "files": [
+    "src",
+    "fixtures",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "password",
+    "security",
+    "hibp",
+    "bloom-filter",
+    "password-strength",
+    "javascript"
+  ],
+  "homepage": "https://github.com/misolith/password-checker#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/misolith/password-checker.git"
+  },
+  "bugs": {
+    "url": "https://github.com/misolith/password-checker/issues"
+  },
+  "author": "Miso Lith",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
     "build:bloom": "node scripts/build-bloom.js",
     "test": "node test/smoke.js",
-    "debug": "python3 -m http.server 4173"
-  },
-  "license": "MIT"
+    "debug": "python3 -m http.server 4173",
+    "prepublishOnly": "npm run build:bloom && npm test"
+  }
 }

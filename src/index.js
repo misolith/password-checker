@@ -29,7 +29,21 @@ export class PasswordDefenseCore {
     const clean = (b64 || '').replace(/[^A-Za-z0-9+/=_-]/g, '').replace(/-/g, '+').replace(/_/g, '/');
     if (!clean) return null;
     const padded = clean + '='.repeat((4 - (clean.length % 4)) % 4);
-    return new Uint8Array(Buffer.from(padded, 'base64'));
+
+    // Node.js path
+    if (typeof Buffer !== 'undefined') {
+      return new Uint8Array(Buffer.from(padded, 'base64'));
+    }
+
+    // Browser path
+    if (typeof atob !== 'undefined') {
+      const bin = atob(padded);
+      const out = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+      return out;
+    }
+
+    throw new Error('No base64 decoder available in this runtime');
   }
 
   ensureBloomLoaded(lang) {

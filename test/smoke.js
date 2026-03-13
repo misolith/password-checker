@@ -12,3 +12,4 @@ console.log('lintu', core.checkBloom('lintu'));
 console.log('password', core.checkBloom('password'));
 console.log('random', core.checkBloom('qzxvbnm'));
 console.log('analyze', core.analyze('passwordaurinko'));
+console.log('analyzeAsync', await core.analyzeAsync('passwordaurinko'));

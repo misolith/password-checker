@@ -4,7 +4,8 @@ const I18N = {
     tips: {
       empty: 'Kirjoita salasana arvioitavaksi.',
       repetition: 'Salasana sisältää paljon toistoa tai vähän eri merkkejä.',
-      sequence: 'Vältä näppäimistö- tai numerojärjestyksiä.'
+      sequence: 'Vältä näppäimistö- tai numerojärjestyksiä.',
+      pwned: 'Salasana löytyi tunnetuista tietovuodoista (HIBP). Älä käytä tätä salasanaa.'
     },
     errors: { noDecoder: 'Base64-dekooderia ei löytynyt tästä ajoympäristöstä.' }
   },
@@ -13,7 +14,8 @@ const I18N = {
     tips: {
       empty: 'Enter a password to analyze.',
       repetition: 'Password contains heavy repetition or too few unique characters.',
-      sequence: 'Avoid keyboard patterns and number sequences.'
+      sequence: 'Avoid keyboard patterns and number sequences.',
+      pwned: 'Found in known data breaches (HIBP). Do not use this password.'
     },
     errors: { noDecoder: 'No base64 decoder available in this runtime.' }
   }
@@ -25,6 +27,11 @@ export class PasswordDefenseCore {
     this.locale = cfg.locale || 'en';
     this.activeLanguages = cfg.activeLanguages || [this.defaultLanguage];
     this.languages = cfg.languages || cfg.blooms || {};
+    this.hibp = {
+      enabled: !!cfg.hibp?.enabled,
+      endpoint: cfg.hibp?.endpoint || 'https://api.pwnedpasswords.com/range/',
+      timeoutMs: Number(cfg.hibp?.timeoutMs || 6000)
+    };
     this.state = {};
     for (const [lang, lc] of Object.entries(this.languages)) {
       this.state[lang] = {
@@ -129,6 +136,57 @@ export class PasswordDefenseCore {
       if (this.checkBloomForLanguage(word, lang)) return true;
     }
     return false;
+  }
+
+  async sha1Hex(input) {
+    const data = new TextEncoder().encode(input);
+    if (!globalThis.crypto?.subtle) {
+      throw new Error('WebCrypto subtle API not available for SHA-1');
+    }
+    const hash = await globalThis.crypto.subtle.digest('SHA-1', data);
+    return Array.from(new Uint8Array(hash))
+      .map((b) => b.toString(16).padStart(2, '0'))
+      .join('')
+      .toUpperCase();
+  }
+
+  async checkPwned(password, options = {}) {
+    const enabled = options.enabled ?? this.hibp.enabled;
+    if (!enabled) return { enabled: false, pwned: false };
+    if (!password || password.length < 1) return { enabled: true, pwned: false, count: 0 };
+
+    const hashHex = await this.sha1Hex(password);
+    const prefix = hashHex.slice(0, 5);
+    const suffix = hashHex.slice(5);
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), options.timeoutMs || this.hibp.timeoutMs);
+    try {
+      const endpoint = options.endpoint || this.hibp.endpoint;
+      const res = await fetch(`${endpoint}${prefix}`, { signal: controller.signal });
+      const text = await res.text();
+      const line = text.split('\n').find((l) => l.toUpperCase().startsWith(suffix));
+      if (!line) return { enabled: true, pwned: false, count: 0 };
+      const count = Number((line.split(':')[1] || '0').trim()) || 0;
+      return { enabled: true, pwned: count > 0, count };
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
+  async analyzeAsync(pw, options = {}) {
+    const base = this.analyze(pw, options);
+    const hibp = await this.checkPwned(pw, options.hibp || {});
+    if (hibp.pwned) {
+      return {
+        ...base,
+        score: 0,
+        label: this.t('labels.dangerous'),
+        tips: [...base.tips, this.t('tips.pwned')],
+        hibp
+      };
+    }
+    return { ...base, hibp };
   }
 
   analyze(pw, options = {}) {

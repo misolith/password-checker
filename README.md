@@ -139,6 +139,23 @@ checker.setLocale('fi');
 checker.setActiveLanguages(['fi']);
 ```
 
+### 4) Optional HaveIBeenPwned (HIBP) check
+
+```js
+const checker = new PasswordDefenseCore({
+  defaultLanguage: bloom.defaultLanguage,
+  locale: 'en',
+  languages: bloom.languages,
+  activeLanguages: ['fi', 'en'],
+  hibp: { enabled: true }
+});
+
+const result = await checker.analyzeAsync('password123');
+console.log(result.hibp); // { enabled: true, pwned: true/false, count }
+```
+
+HIBP uses k-anonymity: only the SHA-1 hash prefix is sent to the API.
+
 ---
 
 ## Bloom configuration

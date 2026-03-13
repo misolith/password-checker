@@ -26,6 +26,9 @@
   <h3>Analyze result</h3>
   <pre id="result"></pre>
 
+  <h3>Matched words/parts</h3>
+  <pre id="matches"></pre>
+
   <h3>Bloom quick checks</h3>
   <pre id="checks"></pre>
 
@@ -44,6 +47,7 @@
     const pwEl = document.getElementById('pw');
     const resultEl = document.getElementById('result');
     const checksEl = document.getElementById('checks');
+    const matchesEl = document.getElementById('matches');
     const fiEl = document.getElementById('lang-fi');
     const enEl = document.getElementById('lang-en');
 
@@ -61,6 +65,11 @@
 
       const r = core.analyze(pw, { languages: langs });
       resultEl.textContent = JSON.stringify(r, null, 2);
+
+      const parts = r.matchedParts || [];
+      matchesEl.textContent = parts.length
+        ? parts.map((m, i) => `${i + 1}. ${m.part} (start=${m.start}, len=${m.len})`).join('\n')
+        : 'No matched parts.';
 
       const testWords = ['lintu','lentää','password','traffic','qwerty','zzzxxy'];
       const lines = testWords.map(w => `${w}: ${core.checkBloom(w, { languages: langs })}`);

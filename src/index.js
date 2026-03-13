@@ -158,6 +158,7 @@ export class PasswordDefenseCore {
     }
 
     let dictionaryMatches = 0;
+    const matchedParts = [];
     const tempPw = pw.toLowerCase();
     const langs = options.languages || this.activeLanguages;
 
@@ -167,6 +168,7 @@ export class PasswordDefenseCore {
           const part = tempPw.substring(i, i + len);
           if (this.checkBloom(part, { languages: langs })) {
             dictionaryMatches++;
+            matchedParts.push({ part, start: i, len });
             i += len - 1;
             break;
           }
@@ -184,6 +186,6 @@ export class PasswordDefenseCore {
     else if (finalScore >= 50) label = this.t('labels.moderate');
     if (finalScore === 0 && penalty >= 50) label = this.t('labels.dangerous');
 
-    return { score: finalScore, label, tips, matches: dictionaryMatches, languages: langs };
+    return { score: finalScore, label, tips, matches: dictionaryMatches, matchedParts, languages: langs };
   }
 }

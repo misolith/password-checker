@@ -1,4 +1,4 @@
-# password-defense-core
+# password-checker
 
 Lightweight, multilingual password-strength analysis core for browser-first password analysis.
 
@@ -8,7 +8,7 @@ Lightweight, multilingual password-strength analysis core for browser-first pass
 
 ## What this library does
 
-`password-defense-core` evaluates password guessability with a practical, browser-friendly model:
+`password-checker` evaluates password guessability with a practical, browser-friendly model:
 
 1. **Entropy estimate** (length + character set diversity)
 2. **Structural penalties** (common sequences, repetition)
@@ -30,7 +30,7 @@ It is designed for fast client-side checks and supports multiple languages (e.g.
 ## Project structure
 
 ```text
-password-defense-core/
+password-checker/
 ├─ config/
 │  └─ bloom.config.json          # bloom build config
 ├─ wordlists/
@@ -53,7 +53,7 @@ password-defense-core/
 ## Installation (local repo usage)
 
 ```bash
-cd projects/password-defense-core
+cd projects/password-checker
 npm install
 ```
 
@@ -64,7 +64,7 @@ npm install
 ## Quick start
 
 ```bash
-cd projects/password-defense-core
+cd projects/password-checker
 npm run build:bloom
 npm test
 ```
@@ -79,7 +79,7 @@ Expected smoke output includes checks like:
 ## Local debug page
 
 ```bash
-cd projects/password-defense-core
+cd projects/password-checker
 npm run build:bloom
 npm run debug
 # open http://localhost:4173/debug/

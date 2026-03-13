@@ -1,5 +1,5 @@
 {
-  "name": "password-defense-core",
+  "name": "password-checker",
   "version": "0.1.0",
   "private": true,
   "description": "Standalone multilingual password analysis core",

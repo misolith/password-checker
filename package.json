@@ -4,13 +4,18 @@
   "description": "Multilingual password analysis with Bloom filtering and optional HIBP checks",
   "type": "module",
   "main": "src/index.js",
+  "types": "src/index.d.ts",
   "exports": {
-    ".": "./src/index.js"
+    ".": {
+      "types": "./src/index.d.ts",
+      "default": "./src/index.js"
+    }
   },
   "files": [
     "src",
     "fixtures",
     "README.md",
+    "CHANGELOG.md",
     "LICENSE"
   ],
   "keywords": [
@@ -36,7 +41,7 @@
   },
   "scripts": {
     "build:bloom": "node scripts/build-bloom.js",
-    "test": "node test/smoke.js",
+    "test": "node --test test/core.test.js && node test/smoke.js",
     "debug": "python3 -m http.server 4173",
     "prepublishOnly": "npm run build:bloom && npm test"
   }

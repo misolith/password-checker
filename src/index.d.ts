@@ -1,0 +1,48 @@
+export type Locale = 'fi' | 'en';
+
+export interface HibpOptions {
+  enabled?: boolean;
+  endpoint?: string;
+  timeoutMs?: number;
+}
+
+export interface BloomLanguageConfig {
+  size: number;
+  hashes: number;
+  minTokenLength?: number;
+  data: string;
+}
+
+export interface PasswordCheckerConfig {
+  defaultLanguage?: string;
+  locale?: Locale;
+  activeLanguages?: string[];
+  languages: Record<string, BloomLanguageConfig>;
+  hibp?: HibpOptions;
+}
+
+export interface AnalyzeResult {
+  score: number;
+  label: string;
+  tips: string[];
+  matches: number;
+  matchedParts?: Array<{ part: string; start: number; len: number }>;
+  languages?: string[];
+}
+
+export interface HibpResult {
+  enabled: boolean;
+  pwned: boolean;
+  count?: number;
+  error?: string;
+}
+
+export declare class PasswordDefenseCore {
+  constructor(cfg: PasswordCheckerConfig);
+  setLocale(locale: Locale): void;
+  setActiveLanguages(languages: string[]): void;
+  checkBloom(word: string, options?: { languages?: string[] }): boolean;
+  analyze(password: string, options?: { locale?: Locale; languages?: string[] }): AnalyzeResult;
+  checkPwned(password: string, options?: HibpOptions): Promise<HibpResult>;
+  analyzeAsync(password: string, options?: { locale?: Locale; languages?: string[]; hibp?: HibpOptions }): Promise<AnalyzeResult & { hibp: HibpResult }>;
+}

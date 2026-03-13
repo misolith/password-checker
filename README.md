@@ -230,10 +230,20 @@ See `PUBLISHING.md` for the release checklist (`npm version` + `npm publish --ac
 
 ---
 
-## Current limitations (known)
+## Security model & limitations
 
+This library is a **UX advisory password checker**, not a standalone security control.
+
+Use it with server-side controls such as:
+- breach/password policy enforcement
+- rate limiting
+- MFA / passkeys
+- secure credential storage (e.g. Argon2id/bcrypt in backend)
+
+Known limitations:
 - Not yet optimized for full morphological analysis (important for Finnish compounds/inflections)
 - Scoring logic is practical, not a formal cryptographic crack-time simulator
+- Bloom filters may introduce probabilistic noise depending on configuration
 - API may still evolve before 1.0
 
 ---

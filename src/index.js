@@ -45,13 +45,17 @@ export class PasswordDefenseCore {
     }
   }
 
-  t(path) {
-    const dict = I18N[this.locale] || I18N.en;
+  resolveLocale(locale) {
+    return I18N[locale] ? locale : 'en';
+  }
+
+  t(path, locale = this.locale) {
+    const dict = I18N[this.resolveLocale(locale)] || I18N.en;
     return path.split('.').reduce((acc, k) => (acc && acc[k] !== undefined ? acc[k] : null), dict) || path;
   }
 
   setLocale(locale = 'en') {
-    this.locale = I18N[locale] ? locale : 'en';
+    this.locale = this.resolveLocale(locale);
   }
 
   setActiveLanguages(languages = []) {
@@ -68,19 +72,15 @@ export class PasswordDefenseCore {
     if (!clean) return null;
     const padded = clean + '='.repeat((4 - (clean.length % 4)) % 4);
 
-    // Node.js path
     if (typeof Buffer !== 'undefined') {
       return new Uint8Array(Buffer.from(padded, 'base64'));
     }
-
-    // Browser path
     if (typeof atob !== 'undefined') {
       const bin = atob(padded);
       const out = new Uint8Array(bin.length);
       for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
       return out;
     }
-
     throw new Error(this.t('errors.noDecoder'));
   }
 
@@ -144,10 +144,7 @@ export class PasswordDefenseCore {
       throw new Error('WebCrypto subtle API not available for SHA-1');
     }
     const hash = await globalThis.crypto.subtle.digest('SHA-1', data);
-    return Array.from(new Uint8Array(hash))
-      .map((b) => b.toString(16).padStart(2, '0'))
-      .join('')
-      .toUpperCase();
+    return Array.from(new Uint8Array(hash)).map((b) => b.toString(16).padStart(2, '0')).join('').toUpperCase();
   }
 
   async checkPwned(password, options = {}) {
@@ -164,34 +161,34 @@ export class PasswordDefenseCore {
     try {
       const endpoint = options.endpoint || this.hibp.endpoint;
       const res = await fetch(`${endpoint}${prefix}`, { signal: controller.signal });
+      if (!res.ok) {
+        return { enabled: true, pwned: false, count: 0, error: `hibp_http_${res.status}` };
+      }
       const text = await res.text();
       const line = text.split('\n').find((l) => l.toUpperCase().startsWith(suffix));
       if (!line) return { enabled: true, pwned: false, count: 0 };
       const count = Number((line.split(':')[1] || '0').trim()) || 0;
       return { enabled: true, pwned: count > 0, count };
+    } catch (err) {
+      return { enabled: true, pwned: false, count: 0, error: err?.name || String(err) };
     } finally {
       clearTimeout(timeout);
     }
   }
 
   async analyzeAsync(pw, options = {}) {
-    const base = this.analyze(pw, options);
+    const locale = this.resolveLocale(options.locale || this.locale);
+    const base = this.analyze(pw, { ...options, locale });
     const hibp = await this.checkPwned(pw, options.hibp || {});
     if (hibp.pwned) {
-      return {
-        ...base,
-        score: 0,
-        label: this.t('labels.dangerous'),
-        tips: [...base.tips, this.t('tips.pwned')],
-        hibp
-      };
+      return { ...base, score: 0, label: this.t('labels.dangerous', locale), tips: [...base.tips, this.t('tips.pwned', locale)], hibp };
     }
     return { ...base, hibp };
   }
 
   analyze(pw, options = {}) {
-    if (options.locale) this.setLocale(options.locale);
-    if (!pw) return { score: 0, label: this.t('labels.weak'), tips: [this.t('tips.empty')] };
+    const locale = this.resolveLocale(options.locale || this.locale);
+    if (!pw) return { score: 0, label: this.t('labels.weak', locale), tips: [this.t('tips.empty', locale)] };
 
     let charsetSize = 0;
     if (/[a-z]/.test(pw)) charsetSize += 26;
@@ -207,12 +204,12 @@ export class PasswordDefenseCore {
       const ratio = uniqueChars / pw.length;
       if (ratio <= 0.6) {
         penalty += Math.round((1 - ratio) * 80);
-        tips.push(this.t('tips.repetition'));
+        tips.push(this.t('tips.repetition', locale));
       }
     }
     if (/(123|abc|qwe|asd|zxc|321|cba|ewq)/i.test(pw)) {
       penalty += 20;
-      tips.push(this.t('tips.sequence'));
+      tips.push(this.t('tips.sequence', locale));
     }
 
     let dictionaryMatches = 0;
@@ -224,7 +221,6 @@ export class PasswordDefenseCore {
       for (let len = 12; len >= 3; len--) {
         if (i + len <= tempPw.length) {
           const part = tempPw.substring(i, i + len);
-          // Ignore mixed/punctuated chunks; dictionary matching is word-token based.
           if (!/^[a-zåäö]+$/i.test(part)) continue;
           if (this.checkBloom(part, { languages: langs })) {
             dictionaryMatches++;
@@ -241,10 +237,10 @@ export class PasswordDefenseCore {
     else if (dictionaryMatches > 2) penalty += 15;
 
     const finalScore = Math.max(0, Math.min(100, Math.round(score - penalty)));
-    let label = this.t('labels.weak');
-    if (finalScore >= 80) label = this.t('labels.strong');
-    else if (finalScore >= 50) label = this.t('labels.moderate');
-    if (finalScore === 0 && penalty >= 50) label = this.t('labels.dangerous');
+    let label = this.t('labels.weak', locale);
+    if (finalScore >= 80) label = this.t('labels.strong', locale);
+    else if (finalScore >= 50) label = this.t('labels.moderate', locale);
+    if (finalScore === 0 && penalty >= 50) label = this.t('labels.dangerous', locale);
 
     return { score: finalScore, label, tips, matches: dictionaryMatches, matchedParts, languages: langs };
   }

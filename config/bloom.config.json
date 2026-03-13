@@ -7,7 +7,7 @@
   },
   "languages": {
     "en": {
-      "input": "wordlists/en.txt"
+      "input": "wordlists/en-frequency-20k.txt"
     },
     "fi": {
       "input": "wordlists/fi.txt",

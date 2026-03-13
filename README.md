@@ -142,6 +142,16 @@ Edit `config/bloom.config.json`:
 
 ---
 
+## Included open-source wordlist example
+
+The repository now includes:
+- `wordlists/en-frequency-20k.txt`
+
+This is a generated open-source example list (top 20k normalized English tokens) from:
+- `hermitdave/FrequencyWords` (`content/2018/en/en_50k.txt`)
+
+Use it directly in `config/bloom.config.json` if you want a stronger default English Bloom profile.
+
 ## Add a new language
 
 1. Create a new wordlist file:

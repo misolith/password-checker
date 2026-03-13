@@ -92,24 +92,51 @@ The debug page lets you:
 
 ---
 
-## Runtime usage
+## How to use
+
+### 1) In a browser HTML page
+
+```html
+<script type="module">
+  import { PasswordDefenseCore } from './src/index.js';
+  import bloom from './fixtures/blooms.generated.json' assert { type: 'json' };
+
+  const checker = new PasswordDefenseCore({
+    defaultLanguage: bloom.defaultLanguage,
+    locale: 'en',
+    languages: bloom.languages,
+    activeLanguages: ['fi', 'en']
+  });
+
+  const result = checker.analyze('passwordaurinko');
+  console.log(result);
+</script>
+```
+
+### 2) In a Node.js project
 
 ```js
 import { PasswordDefenseCore } from './src/index.js';
-import bloom from './fixtures/blooms.generated.json' assert { type: 'json' };
+import fs from 'fs';
 
-const core = new PasswordDefenseCore({
+const bloom = JSON.parse(fs.readFileSync('./fixtures/blooms.generated.json', 'utf8'));
+
+const checker = new PasswordDefenseCore({
   defaultLanguage: bloom.defaultLanguage,
-  locale: 'en', // or 'fi'
+  locale: 'fi',
   languages: bloom.languages,
   activeLanguages: ['fi', 'en']
 });
 
-const result = core.analyze('passwordaurinko', { locale: 'fi' });
-console.log(result);
+console.log(checker.checkBloom('password'));
+console.log(checker.analyze('passwordaurinko', { locale: 'fi' }));
+```
 
-const hit = core.checkBloom('lintu', { languages: ['fi'] });
-console.log(hit);
+### 3) Language switching at runtime
+
+```js
+checker.setLocale('fi');
+checker.setActiveLanguages(['fi']);
 ```
 
 ---

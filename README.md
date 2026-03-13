@@ -1,6 +1,6 @@
 # password-defense-core
 
-Lightweight, multilingual password-strength analysis core extracted from sec-guide.
+Lightweight, multilingual password-strength analysis core for browser-first password analysis.
 
 > ⚠️ Current maturity: **pre-release**. API can still change.
 
@@ -191,9 +191,9 @@ core.setActiveLanguages(['fi', 'en', '<lang>']);
 
 ## Development policy
 
-`sec-guide` production stability has priority.
+Stability-first development policy:
 
-Changes are first validated against sec-guide behavior; extraction into this core package is done incrementally to avoid regressions.
+Changes should remain backward-compatible whenever possible and include runnable test/debug verification.
 
 ---
 

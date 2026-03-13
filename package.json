@@ -2,7 +2,7 @@
   "name": "password-defense-core",
   "version": "0.1.0",
   "private": true,
-  "description": "Standalone password analysis core extracted from sec-guide",
+  "description": "Standalone multilingual password analysis core",
   "type": "module",
   "main": "src/index.js",
   "scripts": {

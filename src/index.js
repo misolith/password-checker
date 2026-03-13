@@ -166,6 +166,8 @@ export class PasswordDefenseCore {
       for (let len = 12; len >= 3; len--) {
         if (i + len <= tempPw.length) {
           const part = tempPw.substring(i, i + len);
+          // Ignore mixed/punctuated chunks; dictionary matching is word-token based.
+          if (!/^[a-zåäö]+$/i.test(part)) continue;
           if (this.checkBloom(part, { languages: langs })) {
             dictionaryMatches++;
             matchedParts.push({ part, start: i, len });

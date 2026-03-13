@@ -1,9 +1,9 @@
 {
   "defaultLanguage": "en",
   "defaults": {
-    "size": 120000,
-    "hashes": 7,
-    "minTokenLength": 3
+    "size": 500000,
+    "hashes": 12,
+    "minTokenLength": 4
   },
   "languages": {
     "en": {

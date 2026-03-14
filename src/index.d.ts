@@ -23,6 +23,7 @@ export interface PasswordCheckerConfig {
 
 export interface AnalyzeResult {
   score: number;
+  rawScore?: number;
   label: string;
   labelKey?: 'weak' | 'moderate' | 'good' | 'strong' | 'dangerous';
   confidence?: 'low' | 'medium' | 'high';
@@ -37,6 +38,7 @@ export interface AnalyzeResult {
     penalties?: { repetition?: number; sequence?: number; shortLength?: number; year?: number; dictionary?: number };
     bonuses?: { passphrase?: number };
     totalPenalty?: number;
+    rawFinal?: number;
     final?: number;
     hibpOverride?: boolean;
   };

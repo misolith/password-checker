@@ -364,13 +364,13 @@ export class PasswordDefenseCore {
       bonusBreakdown.passphrase = passphrase.bonus;
     }
 
-    const finalScore = Math.max(0, Math.min(100, Math.round(score - penalty + bonusBreakdown.passphrase)));
+    const rawScore = Math.max(0, Math.min(100, Math.round(score - penalty + bonusBreakdown.passphrase)));
 
     // Base label by score band
     let labelKey = 'weak';
-    if (finalScore >= 85) labelKey = 'strong';
-    else if (finalScore >= 70) labelKey = 'good';
-    else if (finalScore >= 40) labelKey = 'moderate';
+    if (rawScore >= 85) labelKey = 'strong';
+    else if (rawScore >= 70) labelKey = 'good';
+    else if (rawScore >= 40) labelKey = 'moderate';
 
     // Conservative cap: predictable structure cannot be labeled too high
     const hasCriticalRisk = riskFlags.includes('year_pattern') || riskFlags.includes('dictionary_pattern') || riskFlags.includes('sequence');
@@ -378,12 +378,15 @@ export class PasswordDefenseCore {
       labelKey = passphrase.qualifies && !riskFlags.includes('year_pattern') && !riskFlags.includes('sequence') ? 'good' : 'moderate';
     }
 
-    if (finalScore === 0 && penalty >= 50) labelKey = 'dangerous';
+    if (rawScore === 0 && penalty >= 50) labelKey = 'dangerous';
 
     const label = this.t(`labels.${labelKey}`, locale);
+    const labelCaps = { dangerous: 0, weak: 39, moderate: 69, good: 84, strong: 100 };
+    const adjustedScore = Math.min(rawScore, labelCaps[labelKey] ?? 100);
 
     return {
-      score: finalScore,
+      score: adjustedScore,
+      rawScore,
       label,
       labelKey,
       confidence: hasCriticalRisk ? 'high' : (matchedParts.length > 0 ? 'medium' : 'low'),
@@ -398,7 +401,8 @@ export class PasswordDefenseCore {
         penalties: penaltyBreakdown,
         bonuses: bonusBreakdown,
         totalPenalty: penalty,
-        final: finalScore
+        rawFinal: rawScore,
+        final: adjustedScore
       },
       languages: langs
     };

@@ -25,6 +25,7 @@
   <p><input id="pw" placeholder="Try e.g. passwordaurinko or lintulentää" /></p>
 
   <h3>Analyze result</h3>
+  <p><strong>Label:</strong> <span id="label"></span> · <strong>Score:</strong> <span id="score"></span></p>
   <pre id="result"></pre>
 
   <h3>Matched words/parts</h3>
@@ -50,6 +51,8 @@
 
     const pwEl = document.getElementById('pw');
     const resultEl = document.getElementById('result');
+    const scoreEl = document.getElementById('score');
+    const labelEl = document.getElementById('label');
     const checksEl = document.getElementById('checks');
     const matchesEl = document.getElementById('matches');
     const hibpEl = document.getElementById('hibp');
@@ -84,6 +87,8 @@
       }
 
       resultEl.textContent = JSON.stringify(r, null, 2);
+      scoreEl.textContent = String(r.score ?? '-');
+      labelEl.textContent = `${r.label ?? '-'} (${r.labelKey ?? '-'})`;
 
       const parts = r.matchedParts || [];
       matchesEl.textContent = parts.length

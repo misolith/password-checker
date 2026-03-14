@@ -1,6 +1,6 @@
 const I18N = {
   fi: {
-    labels: { weak: 'Heikko', moderate: 'Kohtalainen', strong: 'Vahva', dangerous: 'VAARALLINEN' },
+    labels: { weak: 'Heikko', moderate: 'Kohtalainen', good: 'Hyvä', strong: 'Vahva', dangerous: 'VAARALLINEN' },
     tips: {
       empty: 'Kirjoita salasana arvioitavaksi.',
       repetition: 'Salasana sisältää paljon toistoa tai vähän eri merkkejä.',
@@ -11,7 +11,7 @@ const I18N = {
     errors: { noDecoder: 'Base64-dekooderia ei löytynyt tästä ajoympäristöstä.' }
   },
   en: {
-    labels: { weak: 'Weak', moderate: 'Moderate', strong: 'Strong', dangerous: 'DANGEROUS' },
+    labels: { weak: 'Weak', moderate: 'Moderate', good: 'Good', strong: 'Strong', dangerous: 'DANGEROUS' },
     tips: {
       empty: 'Enter a password to analyze.',
       repetition: 'Password contains heavy repetition or too few unique characters.',
@@ -183,7 +183,21 @@ export class PasswordDefenseCore {
     const base = this.analyze(pw, { ...options, locale });
     const hibp = await this.checkPwned(pw, options.hibp || {});
     if (hibp.pwned) {
-      return { ...base, score: 0, label: this.t('labels.dangerous', locale), tips: [...base.tips, this.t('tips.pwned', locale)], hibp };
+      return {
+        ...base,
+        score: 0,
+        label: this.t('labels.dangerous', locale),
+        labelKey: 'dangerous',
+        confidence: 'high',
+        tips: [...base.tips, this.t('tips.pwned', locale)],
+        riskFlags: [...new Set([...(base.riskFlags || []), 'hibp_breached'])],
+        scoreBreakdown: {
+          ...(base.scoreBreakdown || {}),
+          final: 0,
+          hibpOverride: true
+        },
+        hibp
+      };
     }
     return { ...base, hibp };
   }
@@ -197,26 +211,36 @@ export class PasswordDefenseCore {
     if (/[A-Z]/.test(pw)) charsetSize += 26;
     if (/[0-9]/.test(pw)) charsetSize += 10;
     if (/[^A-Za-z0-9]/.test(pw)) charsetSize += 33;
-    let score = (pw.length * Math.log2(charsetSize || 1) / 80) * 100;
+    const baselineScore = (pw.length * Math.log2(charsetSize || 1) / 80) * 100;
+    let score = baselineScore;
 
     let penalty = 0;
+    const penaltyBreakdown = { repetition: 0, sequence: 0, year: 0, dictionary: 0 };
+    const riskFlags = [];
     const tips = [];
     const uniqueChars = new Set(pw.split('')).size;
     if (pw.length > 6) {
       const ratio = uniqueChars / pw.length;
       if (ratio <= 0.6) {
-        penalty += Math.round((1 - ratio) * 80);
+        const p = Math.round((1 - ratio) * 80);
+        penalty += p;
+        penaltyBreakdown.repetition += p;
+        riskFlags.push('repetition');
         tips.push(this.t('tips.repetition', locale));
       }
     }
     if (/(123|abc|qwe|asd|zxc|321|cba|ewq)/i.test(pw)) {
       penalty += 20;
+      penaltyBreakdown.sequence += 20;
+      riskFlags.push('sequence');
       tips.push(this.t('tips.sequence', locale));
     }
 
     // Year-like patterns are highly predictable (e.g. name + 2026 + !)
     if (/(?:19\d{2}|20\d{2})/.test(pw)) {
       penalty += 28;
+      penaltyBreakdown.year += 28;
+      riskFlags.push('year_pattern');
       tips.push(this.t('tips.year', locale));
     }
 
@@ -240,16 +264,49 @@ export class PasswordDefenseCore {
       }
     }
 
-    if (dictionaryMatches === 1) penalty += 60;
-    else if (dictionaryMatches === 2) penalty += 45;
-    else if (dictionaryMatches > 2) penalty += 15;
+    if (dictionaryMatches === 1) penaltyBreakdown.dictionary += 60;
+    else if (dictionaryMatches === 2) penaltyBreakdown.dictionary += 45;
+    else if (dictionaryMatches > 2) penaltyBreakdown.dictionary += 15;
+
+    if (penaltyBreakdown.dictionary > 0) {
+      penalty += penaltyBreakdown.dictionary;
+      riskFlags.push('dictionary_pattern');
+    }
 
     const finalScore = Math.max(0, Math.min(100, Math.round(score - penalty)));
-    let label = this.t('labels.weak', locale);
-    if (finalScore >= 80) label = this.t('labels.strong', locale);
-    else if (finalScore >= 50) label = this.t('labels.moderate', locale);
-    if (finalScore === 0 && penalty >= 50) label = this.t('labels.dangerous', locale);
 
-    return { score: finalScore, label, tips, matches: dictionaryMatches, matchedParts, languages: langs };
+    // Base label by score band
+    let labelKey = 'weak';
+    if (finalScore >= 85) labelKey = 'strong';
+    else if (finalScore >= 70) labelKey = 'good';
+    else if (finalScore >= 40) labelKey = 'moderate';
+
+    // Conservative cap: predictable structure cannot be labeled too high
+    const hasCriticalRisk = riskFlags.includes('year_pattern') || riskFlags.includes('dictionary_pattern') || riskFlags.includes('sequence');
+    if (hasCriticalRisk && (labelKey === 'strong' || labelKey === 'good')) {
+      labelKey = 'moderate';
+    }
+
+    if (finalScore === 0 && penalty >= 50) labelKey = 'dangerous';
+
+    const label = this.t(`labels.${labelKey}`, locale);
+
+    return {
+      score: finalScore,
+      label,
+      labelKey,
+      confidence: hasCriticalRisk ? 'high' : (matchedParts.length > 0 ? 'medium' : 'low'),
+      tips,
+      matches: dictionaryMatches,
+      matchedParts,
+      riskFlags: [...new Set(riskFlags)],
+      scoreBreakdown: {
+        baseline: Math.round(baselineScore),
+        penalties: penaltyBreakdown,
+        totalPenalty: penalty,
+        final: finalScore
+      },
+      languages: langs
+    };
   }
 }

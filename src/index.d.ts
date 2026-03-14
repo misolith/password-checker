@@ -24,9 +24,19 @@ export interface PasswordCheckerConfig {
 export interface AnalyzeResult {
   score: number;
   label: string;
+  labelKey?: 'weak' | 'moderate' | 'good' | 'strong' | 'dangerous';
+  confidence?: 'low' | 'medium' | 'high';
   tips: string[];
   matches: number;
   matchedParts?: Array<{ part: string; start: number; len: number }>;
+  riskFlags?: string[];
+  scoreBreakdown?: {
+    baseline?: number;
+    penalties?: { repetition?: number; sequence?: number; year?: number; dictionary?: number };
+    totalPenalty?: number;
+    final?: number;
+    hibpOverride?: boolean;
+  };
   languages?: string[];
 }
 

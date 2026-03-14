@@ -37,6 +37,13 @@
   <h3>Bloom quick checks</h3>
   <pre id="checks"></pre>
 
+  <details style="margin-top:14px;">
+    <summary><strong>Factor tuning (debug simulation)</strong></summary>
+    <p>Adjust factor multipliers to simulate score behavior (does not change real library logic).</p>
+    <div id="factor-controls" style="display:grid; gap:8px;"></div>
+    <pre id="factor-sim"></pre>
+  </details>
+
   <p>Run locally with: <code>npm run debug</code> then open this page.</p>
 
   <script type="module">
@@ -59,12 +66,105 @@
     const fiEl = document.getElementById('lang-fi');
     const enEl = document.getElementById('lang-en');
     const hibpToggle = document.getElementById('hibp-enabled');
+    const factorControlsEl = document.getElementById('factor-controls');
+    const factorSimEl = document.getElementById('factor-sim');
+    const coeffs = {};
 
     function selectedLangs() {
       const langs = [];
       if (fiEl.checked) langs.push('fi');
       if (enEl.checked) langs.push('en');
       return langs.length ? langs : [bloom.defaultLanguage || 'en'];
+    }
+
+    function buildFactorRows(r) {
+      if (!factorControlsEl) return;
+      const d = r.scoreBreakdown || {};
+      const p = d.penalties || {};
+      const b = d.bonuses || {};
+      const rows = [
+        ['baseline', 'Baseline entropy', Number(d.baseline || 0)],
+        ['pen_repetition', 'Penalty: repetition', -Number(p.repetition || 0)],
+        ['pen_sequence', 'Penalty: sequence', -Number(p.sequence || 0)],
+        ['pen_short', 'Penalty: short length', -Number(p.shortLength || 0)],
+        ['pen_year', 'Penalty: year', -Number(p.year || 0)],
+        ['pen_dict', 'Penalty: dictionary', -Number(p.dictionary || 0)],
+        ['pen_phrase', 'Penalty: predictable phrase', -Number(p.predictablePhrase || 0)],
+        ['bonus_passphrase', 'Bonus: passphrase', Number(b.passphrase || 0)]
+      ];
+
+      factorControlsEl.innerHTML = '';
+      rows.forEach(([key, label, points]) => {
+        if (points === 0) return;
+        if (coeffs[key] == null) coeffs[key] = 1;
+
+        const wrap = document.createElement('label');
+        wrap.style.display = 'grid';
+        wrap.style.gridTemplateColumns = '1.6fr 0.7fr 0.7fr';
+        wrap.style.gap = '8px';
+        wrap.style.alignItems = 'center';
+
+        const txt = document.createElement('span');
+        txt.textContent = `${label} (${points >= 0 ? '+' : ''}${points})`;
+
+        const input = document.createElement('input');
+        input.type = 'number';
+        input.step = '0.1';
+        input.min = '0';
+        input.max = '3';
+        input.value = String(coeffs[key]);
+
+        const tag = document.createElement('code');
+        tag.textContent = 'x';
+
+        input.addEventListener('input', () => {
+          const v = Number(input.value);
+          coeffs[key] = Number.isFinite(v) ? v : 1;
+          renderFactorSimulation(r);
+        });
+
+        wrap.appendChild(txt);
+        wrap.appendChild(input);
+        wrap.appendChild(tag);
+        factorControlsEl.appendChild(wrap);
+      });
+
+      if (!factorControlsEl.children.length) {
+        factorControlsEl.innerHTML = '<span>No factor data for this input.</span>';
+      }
+    }
+
+    function renderFactorSimulation(r) {
+      if (!factorSimEl) return;
+      const d = r.scoreBreakdown || {};
+      const p = d.penalties || {};
+      const b = d.bonuses || {};
+
+      const components = [
+        ['baseline', Number(d.baseline || 0)],
+        ['pen_repetition', -Number(p.repetition || 0)],
+        ['pen_sequence', -Number(p.sequence || 0)],
+        ['pen_short', -Number(p.shortLength || 0)],
+        ['pen_year', -Number(p.year || 0)],
+        ['pen_dict', -Number(p.dictionary || 0)],
+        ['pen_phrase', -Number(p.predictablePhrase || 0)],
+        ['bonus_passphrase', Number(b.passphrase || 0)]
+      ];
+
+      let sum = 0;
+      for (const [key, val] of components) {
+        if (!val) continue;
+        const k = Number(coeffs[key] ?? 1);
+        sum += val * k;
+      }
+      const sim = Math.max(0, Math.min(100, Math.round(sum)));
+      factorSimEl.textContent = [
+        `Current score: ${r.score} (${r.label})`,
+        `Raw score: ${r.rawScore ?? '-'}`,
+        `Simulated score (with multipliers): ${sim}`,
+        '',
+        'Simulation only; does not alter real scoring.'
+      ].join('\n');
     }
 
     async function render() {
@@ -100,6 +200,9 @@
       const testWords = ['lintu','lentää','password','traffic','qwerty','zzzxxy'];
       const lines = testWords.map(w => `${w}: ${core.checkBloom(w, { languages: langs })}`);
       checksEl.textContent = lines.join('\n');
+
+      buildFactorRows(r);
+      renderFactorSimulation(r);
     }
 
     pwEl.addEventListener('input', () => { render(); });

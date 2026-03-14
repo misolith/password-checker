@@ -382,15 +382,9 @@ export class PasswordDefenseCore {
 
     const label = this.t(`labels.${labelKey}`, locale);
 
-    let adjustedScore = rawScore;
-    if (labelKey === 'dangerous') adjustedScore = 0;
-    else if (labelKey === 'weak') adjustedScore = Math.min(rawScore, 39);
-    else if (labelKey === 'moderate') adjustedScore = Math.min(rawScore, 69);
-    else if (labelKey === 'good') {
-      // Allow strong long passphrases to continue improving, while keeping a soft ceiling.
-      adjustedScore = passphrase.qualifies ? Math.min(rawScore, 96) : Math.min(rawScore, 84);
-    }
-
+    // No score capping: score should keep improving when entropy/residual randomness improves.
+    // Keep label policy conservative, but preserve transparent numeric progression.
+    const adjustedScore = rawScore;
     return {
       score: adjustedScore,
       rawScore,

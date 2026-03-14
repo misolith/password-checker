@@ -20,14 +20,15 @@ const CASES = [
   { pw: 'qwerty', min: 0, max: 25 },
   { pw: 'password', min: 0, max: 45 },
   { pw: 'Password123', min: 0, max: 45 },
-  { pw: 'Kissa2026!', min: 10, max: 60 },
+  { pw: 'Kissa2026!', min: 0, max: 50 },
   // corner: long + mixed random tail should not collapse to weak
   { pw: 'Kissa-ajaa-autolla-kovaa-eirbfkdlwwwiwiqiii€7u66(((', min: 60, max: 100 },
 
   // weak -> moderate
   { pw: 'Miso2026!', min: 15, max: 65 },
+  { pw: 'Tr1xL1th', min: 0, max: 55 },
   { pw: 'AutoAjaa2026!', min: 10, max: 60 },
-  { pw: 'lintulentaa', min: 15, max: 65 },
+  { pw: 'lintulentaa', min: 10, max: 65 },
   { pw: 'liikennevalo', min: 15, max: 60 },
   { pw: 'testi-testi', min: 0, max: 45 },
 

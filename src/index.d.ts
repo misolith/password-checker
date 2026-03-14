@@ -32,7 +32,7 @@ export interface AnalyzeResult {
   riskFlags?: string[];
   scoreBreakdown?: {
     baseline?: number;
-    penalties?: { repetition?: number; sequence?: number; year?: number; dictionary?: number };
+    penalties?: { repetition?: number; sequence?: number; shortLength?: number; year?: number; dictionary?: number };
     totalPenalty?: number;
     final?: number;
     hibpOverride?: boolean;

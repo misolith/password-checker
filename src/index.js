@@ -5,6 +5,7 @@ const I18N = {
       empty: 'Kirjoita salasana arvioitavaksi.',
       repetition: 'Salasana sisältää paljon toistoa tai vähän eri merkkejä.',
       sequence: 'Vältä näppäimistö- tai numerojärjestyksiä.',
+      short: 'Lyhyt salasana on helpompi murtaa. Tavoittele vähintään 12 merkkiä.',
       year: 'Vältä vuosilukuja (esim. 2026) salasanan osana.',
       pwned: 'Salasana löytyi tunnetuista tietovuodoista (HIBP). Älä käytä tätä salasanaa.'
     },
@@ -16,6 +17,7 @@ const I18N = {
       empty: 'Enter a password to analyze.',
       repetition: 'Password contains heavy repetition or too few unique characters.',
       sequence: 'Avoid keyboard patterns and number sequences.',
+      short: 'Short passwords are easier to crack. Aim for at least 12 characters.',
       year: 'Avoid years (e.g. 2026) as part of a password.',
       pwned: 'Found in known data breaches (HIBP). Do not use this password.'
     },
@@ -215,7 +217,7 @@ export class PasswordDefenseCore {
     let score = baselineScore;
 
     let penalty = 0;
-    const penaltyBreakdown = { repetition: 0, sequence: 0, year: 0, dictionary: 0 };
+    const penaltyBreakdown = { repetition: 0, sequence: 0, shortLength: 0, year: 0, dictionary: 0 };
     const riskFlags = [];
     const tips = [];
     const uniqueChars = new Set(pw.split('')).size;
@@ -234,6 +236,14 @@ export class PasswordDefenseCore {
       penaltyBreakdown.sequence += 20;
       riskFlags.push('sequence');
       tips.push(this.t('tips.sequence', locale));
+    }
+
+    // Short passwords are easier to brute-force even with decoration/leetspeak.
+    if (pw.length < 12) {
+      penalty += 16;
+      penaltyBreakdown.shortLength += 16;
+      riskFlags.push('short_length');
+      tips.push(this.t('tips.short', locale));
     }
 
     // Year-like patterns are highly predictable (e.g. name + 2026 + !)

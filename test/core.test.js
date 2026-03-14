@@ -38,6 +38,23 @@ test('analyze returns matched parts', () => {
   assert.ok(r.matchedParts.length >= 1);
 });
 
+test('long separator-based passphrases get a dedicated strategy and bonus', () => {
+  const core = mkCore();
+  const r = core.analyze('aurinko-joki-kettu-metsa-cosmos');
+  assert.equal(r.strategy, 'passphrase');
+  assert.ok((r.dictionaryWordCount || 0) >= 3);
+  assert.ok((r.scoreBreakdown?.bonuses?.passphrase || 0) > 0);
+  assert.ok(r.score >= 60, `expected passphrase uplift, got ${r.score}`);
+});
+
+test('two-word dictionary compounds do not qualify as passphrases', () => {
+  const core = mkCore();
+  const r = core.analyze('passwordaurinko');
+  assert.notEqual(r.strategy, 'passphrase');
+  assert.equal(r.scoreBreakdown?.bonuses?.passphrase || 0, 0);
+  assert.ok(r.riskFlags?.includes('dictionary_pattern'));
+});
+
 test('year pattern gets penalized', () => {
   const core = mkCore();
   const r = core.analyze('Miso2026!');

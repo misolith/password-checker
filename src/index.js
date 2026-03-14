@@ -25,6 +25,8 @@ const I18N = {
   }
 };
 
+const ASCII_LETTER_RUN_RE = /[A-Za-z]+/g;
+
 export class PasswordDefenseCore {
   constructor(cfg = {}) {
     this.defaultLanguage = cfg.defaultLanguage || 'en';
@@ -142,6 +144,92 @@ export class PasswordDefenseCore {
     return false;
   }
 
+  createUnicodeRegex(source, flags) {
+    try {
+      return new RegExp(source, flags);
+    } catch {
+      return null;
+    }
+  }
+
+  getLetterRuns(input) {
+    const source = String(input || '');
+    const matches = [];
+    const re = this.createUnicodeRegex('\\p{L}+', 'gu') || new RegExp(ASCII_LETTER_RUN_RE);
+    let match;
+    while ((match = re.exec(source)) !== null) {
+      matches.push({ text: match[0], start: match.index });
+    }
+    return matches;
+  }
+
+  findDictionaryMatches(password, languages) {
+    const matches = [];
+    const seen = new Set();
+    const letterRuns = this.getLetterRuns(password);
+
+    for (const run of letterRuns) {
+      const normalized = run.text.toLowerCase();
+      for (let i = 0; i < normalized.length; i++) {
+        const maxLen = Math.min(20, normalized.length - i);
+        for (let len = maxLen; len >= 3; len--) {
+          const part = normalized.substring(i, i + len);
+          if (part.length < 3) continue;
+          if (!this.checkBloom(part, { languages })) continue;
+
+          const start = run.start + i;
+          const key = `${start}:${part}`;
+          if (!seen.has(key)) {
+            matches.push({ part, start, len });
+            seen.add(key);
+          }
+          i += len - 1;
+          break;
+        }
+      }
+    }
+
+    return matches.sort((a, b) => a.start - b.start);
+  }
+
+  assessPassphrase(password, matchedParts = []) {
+    if (matchedParts.length < 2) {
+      return { qualifies: false, words: 0, separators: 0, coverage: 0, bonus: 0, strategy: matchedParts.length === 1 ? 'word_based' : 'random' };
+    }
+
+    const uniqueWords = [...new Set(matchedParts.map((m) => m.part))];
+    const separatorRe = this.createUnicodeRegex('[^0-9\\p{L}]+', 'gu');
+    const separators = separatorRe ? (password.match(separatorRe) || []).length : (password.match(/[^0-9A-Za-z]+/g) || []).length;
+    const letterChars = this.getLetterRuns(password).reduce((sum, run) => sum + run.text.length, 0);
+    const coveredChars = matchedParts.reduce((sum, match) => sum + match.len, 0);
+    const coverage = letterChars > 0 ? coveredChars / letterChars : 0;
+    const longEnough = password.length >= 16;
+    const enoughWords = uniqueWords.length >= 3 || (uniqueWords.length >= 2 && password.length >= 24 && separators >= 1);
+    const qualifies = longEnough && enoughWords && coverage >= 0.6;
+
+    let bonus = 0;
+    if (qualifies) {
+      bonus = 18;
+      if (uniqueWords.length >= 4) bonus += 8;
+      if (password.length >= 24) bonus += 8;
+      if (separators >= 2) bonus += 4;
+      bonus = Math.min(38, bonus);
+    }
+
+    let strategy = 'mixed';
+    if (qualifies) strategy = 'passphrase';
+    else if (coverage >= 0.75) strategy = 'word_based';
+
+    return {
+      qualifies,
+      words: uniqueWords.length,
+      separators,
+      coverage,
+      bonus,
+      strategy
+    };
+  }
+
   async sha1Hex(input) {
     const data = new TextEncoder().encode(input);
     if (!globalThis.crypto?.subtle) {
@@ -254,36 +342,29 @@ export class PasswordDefenseCore {
       tips.push(this.t('tips.year', locale));
     }
 
-    let dictionaryMatches = 0;
-    const matchedParts = [];
-    const tempPw = pw.toLowerCase();
     const langs = options.languages || this.activeLanguages;
-
-    for (let i = 0; i < tempPw.length; i++) {
-      for (let len = 12; len >= 3; len--) {
-        if (i + len <= tempPw.length) {
-          const part = tempPw.substring(i, i + len);
-          if (!/^[a-zåäö]+$/i.test(part)) continue;
-          if (this.checkBloom(part, { languages: langs })) {
-            dictionaryMatches++;
-            matchedParts.push({ part, start: i, len });
-            i += len - 1;
-            break;
-          }
-        }
-      }
-    }
+    const matchedParts = this.findDictionaryMatches(pw, langs);
+    const dictionaryMatches = matchedParts.length;
+    const passphrase = this.assessPassphrase(pw, matchedParts);
 
     if (dictionaryMatches === 1) penaltyBreakdown.dictionary += 40;
     else if (dictionaryMatches === 2) penaltyBreakdown.dictionary += 35;
     else if (dictionaryMatches > 2) penaltyBreakdown.dictionary += 15;
 
     if (penaltyBreakdown.dictionary > 0) {
+      if (passphrase.qualifies) {
+        penaltyBreakdown.dictionary = Math.max(10, penaltyBreakdown.dictionary - 10);
+      }
       penalty += penaltyBreakdown.dictionary;
       riskFlags.push('dictionary_pattern');
     }
 
-    const finalScore = Math.max(0, Math.min(100, Math.round(score - penalty)));
+    const bonusBreakdown = { passphrase: 0 };
+    if (passphrase.qualifies && !riskFlags.includes('sequence') && !riskFlags.includes('year_pattern')) {
+      bonusBreakdown.passphrase = passphrase.bonus;
+    }
+
+    const finalScore = Math.max(0, Math.min(100, Math.round(score - penalty + bonusBreakdown.passphrase)));
 
     // Base label by score band
     let labelKey = 'weak';
@@ -294,7 +375,7 @@ export class PasswordDefenseCore {
     // Conservative cap: predictable structure cannot be labeled too high
     const hasCriticalRisk = riskFlags.includes('year_pattern') || riskFlags.includes('dictionary_pattern') || riskFlags.includes('sequence');
     if (hasCriticalRisk && (labelKey === 'strong' || labelKey === 'good')) {
-      labelKey = 'moderate';
+      labelKey = passphrase.qualifies && !riskFlags.includes('year_pattern') && !riskFlags.includes('sequence') ? 'good' : 'moderate';
     }
 
     if (finalScore === 0 && penalty >= 50) labelKey = 'dangerous';
@@ -309,10 +390,13 @@ export class PasswordDefenseCore {
       tips,
       matches: dictionaryMatches,
       matchedParts,
+      strategy: passphrase.strategy,
+      dictionaryWordCount: passphrase.words,
       riskFlags: [...new Set(riskFlags)],
       scoreBreakdown: {
         baseline: Math.round(baselineScore),
         penalties: penaltyBreakdown,
+        bonuses: bonusBreakdown,
         totalPenalty: penalty,
         final: finalScore
       },

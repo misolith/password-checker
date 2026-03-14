@@ -24,6 +24,7 @@ It is designed for fast client-side checks and supports multiple languages (e.g.
 - ✅ Config-driven Bloom regeneration from text wordlists
 - ✅ Works in browser debug flow and Node.js tests
 - ✅ Adjustable Bloom parameters per language (`size`, `hashes`, `minTokenLength`)
+- ✅ Passphrase-aware scoring for long multi-word passwords
 
 ---
 
@@ -132,6 +133,11 @@ const checker = new PasswordDefenseCore({
 console.log(checker.checkBloom('password'));
 console.log(checker.analyze('passwordaurinko', { locale: 'fi' }));
 ```
+
+`analyze()` now also exposes:
+- `strategy`: `random`, `word_based`, `mixed`, or `passphrase`
+- `dictionaryWordCount`: distinct dictionary words detected in the password
+- `scoreBreakdown.bonuses.passphrase`: uplift applied to strong multi-word passphrases
 
 ### 3) Language switching at runtime
 
@@ -245,6 +251,14 @@ Known limitations:
 - Scoring logic is practical, not a formal cryptographic crack-time simulator
 - Bloom filters may introduce probabilistic noise depending on configuration
 - API may still evolve before 1.0
+
+### Passphrase behavior
+
+Long multi-word passphrases are no longer treated the same way as short dictionary compounds.
+
+- `passwordaurinko` stays word-based and heavily penalized
+- `correct-horse-battery-staple` can score as a strong passphrase
+- year/sequence patterns still suppress passphrase uplift
 
 ---
 

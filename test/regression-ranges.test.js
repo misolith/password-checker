@@ -38,6 +38,8 @@ const CASES = [
   { pw: 'north:river:stone', min: 45, max: 100 },
   { pw: 'Metsa!Joki!Taivas', min: 45, max: 100 },
   { pw: 'Harbor_Owl_Quartz9', min: 50, max: 100 },
+  { pw: 'aurinko-joki-kettu-metsa-cosmos', min: 60, max: 100 },
+  { pw: 'correct-horse-battery-staple', min: 60, max: 100 },
 
   // stronger random-ish
   { pw: 'x7$Qp2!mR9#tV4', min: 70, max: 100 },

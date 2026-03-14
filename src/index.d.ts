@@ -29,10 +29,13 @@ export interface AnalyzeResult {
   tips: string[];
   matches: number;
   matchedParts?: Array<{ part: string; start: number; len: number }>;
+  strategy?: 'random' | 'word_based' | 'mixed' | 'passphrase';
+  dictionaryWordCount?: number;
   riskFlags?: string[];
   scoreBreakdown?: {
     baseline?: number;
     penalties?: { repetition?: number; sequence?: number; shortLength?: number; year?: number; dictionary?: number };
+    bonuses?: { passphrase?: number };
     totalPenalty?: number;
     final?: number;
     hibpOverride?: boolean;

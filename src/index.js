@@ -238,8 +238,8 @@ export class PasswordDefenseCore {
 
     // Year-like patterns are highly predictable (e.g. name + 2026 + !)
     if (/(?:19\d{2}|20\d{2})/.test(pw)) {
-      penalty += 28;
-      penaltyBreakdown.year += 28;
+      penalty += 18;
+      penaltyBreakdown.year += 18;
       riskFlags.push('year_pattern');
       tips.push(this.t('tips.year', locale));
     }
@@ -264,8 +264,8 @@ export class PasswordDefenseCore {
       }
     }
 
-    if (dictionaryMatches === 1) penaltyBreakdown.dictionary += 60;
-    else if (dictionaryMatches === 2) penaltyBreakdown.dictionary += 45;
+    if (dictionaryMatches === 1) penaltyBreakdown.dictionary += 40;
+    else if (dictionaryMatches === 2) penaltyBreakdown.dictionary += 35;
     else if (dictionaryMatches > 2) penaltyBreakdown.dictionary += 15;
 
     if (penaltyBreakdown.dictionary > 0) {

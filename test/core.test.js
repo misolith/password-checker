@@ -55,6 +55,13 @@ test('two-word dictionary compounds do not qualify as passphrases', () => {
   assert.ok(r.riskFlags?.includes('dictionary_pattern'));
 });
 
+test('common multi-word phrase does not inflate to near-perfect score', () => {
+  const core = mkCore();
+  const r = core.analyze('Kissa-koira-marsu-lehmä', { locale: 'fi', languages: ['fi', 'en'] });
+  assert.ok(r.score <= 90);
+  assert.ok((r.riskFlags || []).includes('predictable_phrase'));
+});
+
 test('year pattern gets penalized', () => {
   const core = mkCore();
   const r = core.analyze('Miso2026!');

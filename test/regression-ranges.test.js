@@ -21,8 +21,8 @@ const CASES = [
   { pw: 'password', min: 0, max: 45 },
   { pw: 'Password123', min: 0, max: 45 },
   { pw: 'Kissa2026!', min: 0, max: 50 },
-  { pw: 'Kissa-koira-marsu', min: 50, max: 100 },
-  { pw: 'Kissa-koira-marsu-lehmä', min: 55, max: 100 },
+  { pw: 'Kissa-koira-marsu', min: 45, max: 88 },
+  { pw: 'Kissa-koira-marsu-lehmä', min: 50, max: 90 },
   // corner: long + mixed random tail should not collapse to weak
   { pw: 'Kissa-ajaa-autolla-kovaa-eirbfkdlwwwiwiqiii€7u66(((', min: 60, max: 100 },
 

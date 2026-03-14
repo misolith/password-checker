@@ -6,6 +6,7 @@ const I18N = {
       repetition: 'Salasana sisältää paljon toistoa tai vähän eri merkkejä.',
       sequence: 'Vältä näppäimistö- tai numerojärjestyksiä.',
       short: 'Lyhyt salasana on helpompi murtaa. Tavoittele vähintään 12 merkkiä.',
+      phrase: 'Pitkäkin salasanalauseke kannattaa maustaa satunnaisella osalla, jos se koostuu vain yleisistä sanoista.',
       year: 'Vältä vuosilukuja (esim. 2026) salasanan osana.',
       pwned: 'Salasana löytyi tunnetuista tietovuodoista (HIBP). Älä käytä tätä salasanaa.'
     },
@@ -18,6 +19,7 @@ const I18N = {
       repetition: 'Password contains heavy repetition or too few unique characters.',
       sequence: 'Avoid keyboard patterns and number sequences.',
       short: 'Short passwords are easier to crack. Aim for at least 12 characters.',
+      phrase: 'Even long passphrases should include a random element when built from very common words.',
       year: 'Avoid years (e.g. 2026) as part of a password.',
       pwned: 'Found in known data breaches (HIBP). Do not use this password.'
     },
@@ -305,7 +307,7 @@ export class PasswordDefenseCore {
     let score = baselineScore;
 
     let penalty = 0;
-    const penaltyBreakdown = { repetition: 0, sequence: 0, shortLength: 0, year: 0, dictionary: 0 };
+    const penaltyBreakdown = { repetition: 0, sequence: 0, shortLength: 0, year: 0, dictionary: 0, predictablePhrase: 0 };
     const riskFlags = [];
     const tips = [];
     const uniqueChars = new Set(pw.split('')).size;
@@ -347,6 +349,11 @@ export class PasswordDefenseCore {
     const dictionaryMatches = matchedParts.length;
     const passphrase = this.assessPassphrase(pw, matchedParts);
 
+    const letterRuns = this.getLetterRuns(pw);
+    const letterCount = letterRuns.reduce((sum, run) => sum + run.text.length, 0);
+    const matchedLetterCount = matchedParts.reduce((sum, m) => sum + m.len, 0);
+    const dictionaryCoverage = letterCount > 0 ? matchedLetterCount / letterCount : 0;
+
     if (dictionaryMatches === 1) penaltyBreakdown.dictionary += 40;
     else if (dictionaryMatches === 2) penaltyBreakdown.dictionary += 35;
     else if (dictionaryMatches > 2) penaltyBreakdown.dictionary += 15;
@@ -359,9 +366,21 @@ export class PasswordDefenseCore {
       riskFlags.push('dictionary_pattern');
     }
 
+    // If phrase is almost entirely common dictionary words, keep score realistic.
+    const wordOnlyComposition = /^[A-Za-zÅÄÖåäö\-_'\s]+$/.test(pw);
+    const isPredictablePhrase = passphrase.qualifies && (dictionaryCoverage >= 0.9 || (wordOnlyComposition && passphrase.words >= 3));
+    if (isPredictablePhrase) {
+      penaltyBreakdown.predictablePhrase = 35;
+      penalty += penaltyBreakdown.predictablePhrase;
+      riskFlags.push('predictable_phrase');
+      tips.push(this.t('tips.phrase', locale));
+    }
+
     const bonusBreakdown = { passphrase: 0 };
     if (passphrase.qualifies && !riskFlags.includes('sequence') && !riskFlags.includes('year_pattern')) {
-      bonusBreakdown.passphrase = passphrase.bonus;
+      bonusBreakdown.passphrase = isPredictablePhrase
+        ? Math.max(6, Math.round(passphrase.bonus * 0.35))
+        : passphrase.bonus;
     }
 
     const rawScore = Math.max(0, Math.min(100, Math.round(score - penalty + bonusBreakdown.passphrase)));
@@ -382,9 +401,12 @@ export class PasswordDefenseCore {
 
     const label = this.t(`labels.${labelKey}`, locale);
 
-    // No score capping: score should keep improving when entropy/residual randomness improves.
-    // Keep label policy conservative, but preserve transparent numeric progression.
-    const adjustedScore = rawScore;
+    // No global score capping. Only apply a soft ceiling for highly predictable, word-only passphrases.
+    let adjustedScore = rawScore;
+    if (isPredictablePhrase) {
+      const softCeiling = Math.min(88, 70 + Math.max(0, (pw.length - 12) * 0.8));
+      adjustedScore = Math.min(adjustedScore, Math.round(softCeiling));
+    }
     return {
       score: adjustedScore,
       rawScore,

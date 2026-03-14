@@ -381,8 +381,15 @@ export class PasswordDefenseCore {
     if (rawScore === 0 && penalty >= 50) labelKey = 'dangerous';
 
     const label = this.t(`labels.${labelKey}`, locale);
-    const labelCaps = { dangerous: 0, weak: 39, moderate: 69, good: 84, strong: 100 };
-    const adjustedScore = Math.min(rawScore, labelCaps[labelKey] ?? 100);
+
+    let adjustedScore = rawScore;
+    if (labelKey === 'dangerous') adjustedScore = 0;
+    else if (labelKey === 'weak') adjustedScore = Math.min(rawScore, 39);
+    else if (labelKey === 'moderate') adjustedScore = Math.min(rawScore, 69);
+    else if (labelKey === 'good') {
+      // Allow strong long passphrases to continue improving, while keeping a soft ceiling.
+      adjustedScore = passphrase.qualifies ? Math.min(rawScore, 96) : Math.min(rawScore, 84);
+    }
 
     return {
       score: adjustedScore,
@@ -402,6 +409,7 @@ export class PasswordDefenseCore {
         bonuses: bonusBreakdown,
         totalPenalty: penalty,
         rawFinal: rawScore,
+        capPenalty: Math.max(0, rawScore - adjustedScore),
         final: adjustedScore
       },
       languages: langs

@@ -39,6 +39,7 @@ export interface AnalyzeResult {
     bonuses?: { passphrase?: number };
     totalPenalty?: number;
     rawFinal?: number;
+    capPenalty?: number;
     final?: number;
     hibpOverride?: boolean;
   };

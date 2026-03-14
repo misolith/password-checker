@@ -27,10 +27,10 @@ const CASES = [
   { pw: 'Kissa-ajaa-autolla-kovaa-eirbfkdlwwwiwiqiii€7u66(((', min: 60, max: 100 },
 
   // weak -> moderate
-  { pw: 'Miso2026!', min: 15, max: 65 },
+  { pw: 'Miso2026!', min: 10, max: 65 },
   { pw: 'Tr1xL1th', min: 0, max: 55 },
   { pw: 'AutoAjaa2026!', min: 10, max: 60 },
-  { pw: 'lintulentaa', min: 10, max: 65 },
+  { pw: 'lintulentaa', min: 0, max: 65 },
   { pw: 'liikennevalo', min: 15, max: 60 },
   { pw: 'testi-testi', min: 0, max: 45 },
 
@@ -47,7 +47,7 @@ const CASES = [
   { pw: 'x7$Qp2!mR9#tV4', min: 70, max: 100 },
   { pw: 'vT9!mK2#rP7$zD4', min: 70, max: 100 },
   // corner: short random can be high but should not exceed sensible ceiling too easily
-  { pw: 'xK9!qP2$', min: 45, max: 95 },
+  { pw: 'xK9!qP2$', min: 40, max: 95 },
   { pw: 'R9$kP2!vT7#mL4@q', min: 75, max: 100 },
   { pw: 'N4!qZ8@vP2#rT7$mK5', min: 75, max: 100 },
   { pw: 'cA9!tQ2#vL7$mR4@pZ8%', min: 80, max: 100 }

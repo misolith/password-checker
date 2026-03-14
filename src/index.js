@@ -211,11 +211,12 @@ export class PasswordDefenseCore {
 
     let bonus = 0;
     if (qualifies) {
+      // 3-word passphrase gets baseline uplift; 4+ words doubles the phrase uplift.
       bonus = 18;
-      if (uniqueWords.length >= 4) bonus += 8;
+      if (uniqueWords.length >= 4) bonus *= 2;
       if (password.length >= 24) bonus += 8;
       if (separators >= 2) bonus += 4;
-      bonus = Math.min(38, bonus);
+      bonus = Math.min(60, bonus);
     }
 
     let strategy = 'mixed';
@@ -330,16 +331,16 @@ export class PasswordDefenseCore {
 
     // Short passwords are easier to brute-force even with decoration/leetspeak.
     if (pw.length < 12) {
-      penalty += 16;
-      penaltyBreakdown.shortLength += 16;
+      penalty += 24; // 1.5x from prior 16
+      penaltyBreakdown.shortLength += 24;
       riskFlags.push('short_length');
       tips.push(this.t('tips.short', locale));
     }
 
     // Year-like patterns are highly predictable (e.g. name + 2026 + !)
     if (/(?:19\d{2}|20\d{2})/.test(pw)) {
-      penalty += 18;
-      penaltyBreakdown.year += 18;
+      penalty += 36; // doubled year penalty
+      penaltyBreakdown.year += 36;
       riskFlags.push('year_pattern');
       tips.push(this.t('tips.year', locale));
     }

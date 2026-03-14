@@ -21,6 +21,8 @@ const CASES = [
   { pw: 'password', min: 0, max: 45 },
   { pw: 'Password123', min: 0, max: 45 },
   { pw: 'Kissa2026!', min: 0, max: 50 },
+  { pw: 'Kissa-koira-marsu', min: 50, max: 100 },
+  { pw: 'Kissa-koira-marsu-lehmä', min: 55, max: 100 },
   // corner: long + mixed random tail should not collapse to weak
   { pw: 'Kissa-ajaa-autolla-kovaa-eirbfkdlwwwiwiqiii€7u66(((', min: 60, max: 100 },
 
@@ -61,4 +63,15 @@ test('score regression ranges stay stable-ish across updates', () => {
       `Password "${c.pw}" expected ${c.min}-${c.max}, got ${r.score} (label=${r.label}, flags=${(r.riskFlags || []).join(',')})`
     );
   }
+});
+
+test('longer multi-word phrase should not score lower than shorter sibling by cap artifact', () => {
+  const core = mkCore();
+  const a = core.analyze('Kissa-koira-marsu', { locale: 'en', languages: ['fi', 'en'] });
+  const b = core.analyze('Kissa-koira-marsu-lehmä', { locale: 'en', languages: ['fi', 'en'] });
+
+  assert.ok(
+    b.score >= a.score,
+    `Expected longer phrase to score >= shorter one, got shorter=${a.score}, longer=${b.score}`
+  );
 });

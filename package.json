@@ -41,7 +41,7 @@
   },
   "scripts": {
     "build:bloom": "node scripts/build-bloom.js",
-    "test": "node --test test/core.test.js && node test/smoke.js",
+    "test": "node --test test/*.test.js && node test/smoke.js",
     "debug": "python3 -m http.server 4173",
     "prepublishOnly": "npm run build:bloom && npm test"
   }

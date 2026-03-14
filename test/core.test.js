@@ -38,6 +38,13 @@ test('analyze returns matched parts', () => {
   assert.ok(r.matchedParts.length >= 1);
 });
 
+test('year pattern gets penalized', () => {
+  const core = mkCore();
+  const r = core.analyze('Miso2026!');
+  assert.ok(r.score < 60);
+  assert.ok(r.tips.some((t) => /year|vuosiluku/i.test(t)));
+});
+
 test('HIBP handles non-200 as structured error', async () => {
   const core = mkCore();
   globalThis.fetch = async () => ({ ok: false, status: 503, text: async () => '' });

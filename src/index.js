@@ -5,6 +5,7 @@ const I18N = {
       empty: 'Kirjoita salasana arvioitavaksi.',
       repetition: 'Salasana sisältää paljon toistoa tai vähän eri merkkejä.',
       sequence: 'Vältä näppäimistö- tai numerojärjestyksiä.',
+      year: 'Vältä vuosilukuja (esim. 2026) salasanan osana.',
       pwned: 'Salasana löytyi tunnetuista tietovuodoista (HIBP). Älä käytä tätä salasanaa.'
     },
     errors: { noDecoder: 'Base64-dekooderia ei löytynyt tästä ajoympäristöstä.' }
@@ -15,6 +16,7 @@ const I18N = {
       empty: 'Enter a password to analyze.',
       repetition: 'Password contains heavy repetition or too few unique characters.',
       sequence: 'Avoid keyboard patterns and number sequences.',
+      year: 'Avoid years (e.g. 2026) as part of a password.',
       pwned: 'Found in known data breaches (HIBP). Do not use this password.'
     },
     errors: { noDecoder: 'No base64 decoder available in this runtime.' }
@@ -210,6 +212,12 @@ export class PasswordDefenseCore {
     if (/(123|abc|qwe|asd|zxc|321|cba|ewq)/i.test(pw)) {
       penalty += 20;
       tips.push(this.t('tips.sequence', locale));
+    }
+
+    // Year-like patterns are highly predictable (e.g. name + 2026 + !)
+    if (/(?:19\d{2}|20\d{2})/.test(pw)) {
+      penalty += 28;
+      tips.push(this.t('tips.year', locale));
     }
 
     let dictionaryMatches = 0;

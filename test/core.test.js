@@ -78,3 +78,25 @@ test('HIBP handles non-200 as structured error', async () => {
   assert.equal(r.pwned, false);
   assert.equal(r.error, 'hibp_http_503');
 });
+
+test('bloom token normalization uses NFKC equivalence', () => {
+  const core = mkCore();
+  assert.equal(core.checkBloom('ＰＡＳＳＷＯＲＤ'), true);
+});
+
+test('bloom payload size mismatch throws clear error', () => {
+  const core = new PasswordDefenseCore({
+    defaultLanguage: 'en',
+    languages: {
+      en: {
+        size: 500000,
+        hashes: 12,
+        minTokenLength: 3,
+        data: 'AA=='
+      }
+    },
+    activeLanguages: ['en']
+  });
+
+  assert.throws(() => core.checkBloom('password', { languages: ['en'] }), /Bloom payload size mismatch/);
+});

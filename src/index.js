@@ -42,12 +42,15 @@ export class PasswordDefenseCore {
     };
     this.state = {};
     for (const [lang, lc] of Object.entries(this.languages)) {
+      const size = Number(lc.size);
+      const hashes = Number(lc.hashes);
+      const minTokenLength = Number(lc.minTokenLength);
       this.state[lang] = {
         bloomReady: false,
         bloomBytes: null,
-        size: Number(lc.size) || 120000,
-        hashes: Number(lc.hashes) || 7,
-        minTokenLength: Number(lc.minTokenLength) || 3,
+        size: Number.isInteger(size) && size >= 1024 ? size : 120000,
+        hashes: Number.isInteger(hashes) && hashes >= 1 && hashes <= 32 ? hashes : 7,
+        minTokenLength: Number.isInteger(minTokenLength) && minTokenLength >= 1 ? minTokenLength : 3,
         data: typeof lc.data === 'string' ? lc.data : ''
       };
     }
@@ -64,6 +67,10 @@ export class PasswordDefenseCore {
 
   setLocale(locale = 'en') {
     this.locale = this.resolveLocale(locale);
+  }
+
+  normalizeToken(token) {
+    return String(token || '').normalize('NFKC').toLowerCase();
   }
 
   setActiveLanguages(languages = []) {
@@ -96,6 +103,12 @@ export class PasswordDefenseCore {
     const s = this.state[lang];
     if (!s || s.bloomReady) return;
     s.bloomBytes = this.decodeBloomBase64(s.data);
+    if (s.bloomBytes) {
+      const expectedBytes = Math.ceil(s.size / 8);
+      if (s.bloomBytes.length !== expectedBytes) {
+        throw new Error(`Bloom payload size mismatch for '${lang}': expected ${expectedBytes} bytes, got ${s.bloomBytes.length}`);
+      }
+    }
     s.bloomReady = true;
   }
 
@@ -123,7 +136,7 @@ export class PasswordDefenseCore {
     this.ensureBloomLoaded(lang);
     if (!s.bloomBytes || s.bloomBytes.length === 0) return false;
 
-    const w = word.toLowerCase();
+    const w = this.normalizeToken(word);
     const h1 = this.hash1FNV1a(w);
     let h2 = this.hash2DJB2(w);
     if (h2 === 0) h2 = 1;
@@ -171,7 +184,7 @@ export class PasswordDefenseCore {
     const letterRuns = this.getLetterRuns(password);
 
     for (const run of letterRuns) {
-      const normalized = run.text.toLowerCase();
+      const normalized = this.normalizeToken(run.text);
       for (let i = 0; i < normalized.length; i++) {
         const maxLen = Math.min(20, normalized.length - i);
         for (let len = maxLen; len >= 3; len--) {
@@ -368,7 +381,8 @@ export class PasswordDefenseCore {
     }
 
     // If phrase is almost entirely common dictionary words, keep score realistic.
-    const wordOnlyComposition = /^[A-Za-zÅÄÖåäö\-_'\s]+$/.test(pw);
+    const wordOnlyCompositionRe = this.createUnicodeRegex("^[\\p{L}\\-_'\\s]+$", 'u') || /^[A-Za-zÅÄÖåäö\-_'\s]+$/;
+    const wordOnlyComposition = wordOnlyCompositionRe.test(pw);
     const isPredictablePhrase = passphrase.qualifies && (dictionaryCoverage >= 0.9 || (wordOnlyComposition && passphrase.words >= 3));
     if (isPredictablePhrase) {
       penaltyBreakdown.predictablePhrase = 35;

@@ -40,7 +40,22 @@ function hashWord(word, idx, size) {
 }
 
 function normalizeToken(token) {
-  return token.trim().toLowerCase();
+  return String(token || '').normalize('NFKC').trim().toLowerCase();
+}
+
+function toPositiveInt(value, fallback, { min = 1, max = Number.MAX_SAFE_INTEGER, name = 'value' } = {}) {
+  const num = Number(value);
+  if (!Number.isInteger(num) || num < min || num > max) {
+    if (fallback !== undefined && fallback !== null) return fallback;
+    throw new Error(`Invalid ${name}: ${value}`);
+  }
+  return num;
+}
+
+function expectedFpr(wordCount, size, hashes) {
+  if (!wordCount || !size || !hashes) return 1;
+  const expTerm = Math.exp((-hashes * wordCount) / size);
+  return Math.pow(1 - expTerm, hashes);
 }
 
 const output = {
@@ -50,9 +65,13 @@ const output = {
 };
 
 for (const [lang, lc] of Object.entries(langs)) {
-  const size = Number(lc.size || defaults.size || 120000);
-  const hashes = Number(lc.hashes || defaults.hashes || 7);
-  const minTokenLength = Number(lc.minTokenLength || defaults.minTokenLength || 3);
+  if (!lc.input || typeof lc.input !== 'string') {
+    throw new Error(`Invalid input path for language '${lang}'`);
+  }
+  const size = toPositiveInt(lc.size ?? defaults.size ?? 120000, null, { min: 1024, max: 10_000_000, name: `${lang}.size` });
+  const hashes = toPositiveInt(lc.hashes ?? defaults.hashes ?? 7, null, { min: 1, max: 32, name: `${lang}.hashes` });
+  const minTokenLength = toPositiveInt(lc.minTokenLength ?? defaults.minTokenLength ?? 3, null, { min: 1, max: 64, name: `${lang}.minTokenLength` });
+
   const inputPath = path.resolve(path.dirname(configPath), '..', lc.input);
   if (!fs.existsSync(inputPath)) throw new Error(`Input missing for ${lang}: ${inputPath}`);
 
@@ -62,6 +81,9 @@ for (const [lang, lc] of Object.entries(langs)) {
     .filter(w => w && !w.startsWith('#') && w.length >= minTokenLength);
 
   const uniqueWords = [...new Set(words)];
+  if (!uniqueWords.length) {
+    throw new Error(`No valid tokens for language '${lang}' after normalization/filtering`);
+  }
   const bytes = new Uint8Array(Math.ceil(size / 8));
 
   for (const word of uniqueWords) {
@@ -73,15 +95,18 @@ for (const [lang, lc] of Object.entries(langs)) {
     }
   }
 
+  const fpr = expectedFpr(uniqueWords.length, size, hashes);
   output.languages[lang] = {
     size,
     hashes,
     minTokenLength,
     wordCount: uniqueWords.length,
+    expectedBytes: bytes.length,
+    estimatedFalsePositiveRate: Number(fpr.toFixed(8)),
     data: Buffer.from(bytes).toString('base64')
   };
 
-  console.log(`built ${lang}: words=${uniqueWords.length}, size=${size}, hashes=${hashes}`);
+  console.log(`built ${lang}: words=${uniqueWords.length}, size=${size}, hashes=${hashes}, fpr≈${(fpr * 100).toFixed(4)}%`);
 }
 
 const outPath = path.resolve(path.dirname(configPath), '..', (config.output || 'fixtures/blooms.generated.json'));

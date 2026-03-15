@@ -58,6 +58,19 @@ function expectedFpr(wordCount, size, hashes) {
   return Math.pow(1 - expTerm, hashes);
 }
 
+function collectWarnings({ lang, size, hashes, minTokenLength, wordCount, fpr }) {
+  const out = [];
+  const bitsPerWord = size / Math.max(1, wordCount);
+
+  if (hashes > 20) out.push(`[${lang}] hashes=${hashes} is high; build/read cost may be unnecessary.`);
+  if (hashes < 3) out.push(`[${lang}] hashes=${hashes} is very low; false positives may increase.`);
+  if (bitsPerWord < 8) out.push(`[${lang}] bits/word=${bitsPerWord.toFixed(2)} is low; consider larger size.`);
+  if (fpr > 0.02) out.push(`[${lang}] estimated FPR ${(fpr * 100).toFixed(2)}% is high for security scoring.`);
+  if (minTokenLength < 3) out.push(`[${lang}] minTokenLength=${minTokenLength} may over-match very short fragments.`);
+
+  return out;
+}
+
 const output = {
   defaultLanguage: config.defaultLanguage || 'en',
   generatedAt: new Date().toISOString(),
@@ -107,6 +120,16 @@ for (const [lang, lc] of Object.entries(langs)) {
   };
 
   console.log(`built ${lang}: words=${uniqueWords.length}, size=${size}, hashes=${hashes}, fpr≈${(fpr * 100).toFixed(4)}%`);
+
+  const warnings = collectWarnings({
+    lang,
+    size,
+    hashes,
+    minTokenLength,
+    wordCount: uniqueWords.length,
+    fpr
+  });
+  warnings.forEach((w) => console.warn(`⚠️  ${w}`));
 }
 
 const outPath = path.resolve(path.dirname(configPath), '..', (config.output || 'fixtures/blooms.generated.json'));

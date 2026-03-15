@@ -95,7 +95,6 @@
 
       factorControlsEl.innerHTML = '';
       rows.forEach(([key, label, points]) => {
-        if (points === 0) return;
         if (coeffs[key] == null) coeffs[key] = 1;
 
         const wrap = document.createElement('label');

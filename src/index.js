@@ -317,7 +317,7 @@ export class PasswordDefenseCore {
     if (/[A-Z]/.test(pw)) charsetSize += 26;
     if (/[0-9]/.test(pw)) charsetSize += 10;
     if (/[^A-Za-z0-9]/.test(pw)) charsetSize += 33;
-    const baselineScore = (pw.length * Math.log2(charsetSize || 1) / 80) * 100;
+    const baselineScore = ((pw.length * Math.log2(charsetSize || 1) / 80) * 100) * 0.8;
     let score = baselineScore;
 
     let penalty = 0;

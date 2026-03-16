@@ -29,6 +29,38 @@ console.log(result.score, result.label, result.riskFlags);
 
 > Tip: Use this as a UX guidance layer in frontend flows, not as a standalone auth control.
 
+### Simpler option: ship your own Bloom JSON
+
+If JSON import assertions feel too complex for your runtime, generate and bundle your own Bloom file in your app repository.
+
+1) Create a build config (example):
+
+```json
+{
+  "defaultLanguage": "en",
+  "defaults": { "size": 500000, "hashes": 12, "minTokenLength": 4 },
+  "languages": {
+    "en": { "input": "./wordlists/en.txt" },
+    "fi": { "input": "./wordlists/fi.txt", "minTokenLength": 3 }
+  },
+  "output": "./src/security/blooms.generated.json"
+}
+```
+
+2) Generate Bloom payloads during your build:
+
+```bash
+# Use your local bloom builder script (for example, copied/adapted from this repo)
+node ./scripts/build-bloom.js ./bloom.config.json
+```
+
+3) Import your local generated file (clearer import path):
+
+```js
+import { PasswordDefenseCore } from '@misok/password-checker';
+import bloom from './security/blooms.generated.json' assert { type: 'json' };
+```
+
 ## What this library does
 
 `password-checker` evaluates password guessability with a practical, browser-friendly model:

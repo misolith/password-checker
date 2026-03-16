@@ -92,6 +92,9 @@ The debug page lets you:
 - run quick bloom hit checks for sample words
 - toggle optional HIBP checks and inspect returned status/count/error
 
+Hosted debug page (GitHub Pages):
+- https://misolith.github.io/password-checker/debug/
+
 ---
 
 ## How to use

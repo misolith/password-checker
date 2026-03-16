@@ -282,10 +282,6 @@ core.setActiveLanguages(['fi', 'en', '<lang>']);
 
 ---
 
-## Publish notes
-
-See `PUBLISHING.md` for the release checklist (`npm version` + `npm publish --access public`).
-
 ## NPM scripts
 
 - `npm run build:bloom` → generate `fixtures/blooms.generated.json`
@@ -309,15 +305,6 @@ Known limitations:
 - Scoring logic is practical, not a formal cryptographic crack-time simulator
 - Bloom filters may introduce probabilistic noise depending on configuration
 - API may still evolve before 1.0
-
-## Roadmap to broader production readiness
-
-Near-term priorities:
-- Expand Finnish word coverage to reduce under-detection of common compounds
-- Improve passphrase/repetition balancing for long, human-readable multi-word inputs
-- Add richer regression matrix for multilingual edge cases and policy consistency
-- Stabilize API contracts and mark 1.0 freeze criteria explicitly
-- Add benchmark/profile docs (browser/runtime footprint and tuning guidance)
 
 ### Passphrase behavior
 

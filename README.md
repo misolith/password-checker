@@ -6,6 +6,29 @@ Lightweight, multilingual password-strength analysis core for browser-first pass
 
 ---
 
+## Quick start (copy-paste)
+
+```bash
+npm install @misok/password-checker
+```
+
+```js
+import { PasswordDefenseCore } from '@misok/password-checker';
+import bloom from '@misok/password-checker/fixtures/blooms.generated.json' assert { type: 'json' };
+
+const checker = new PasswordDefenseCore({
+  defaultLanguage: bloom.defaultLanguage,
+  locale: 'en',
+  languages: bloom.languages,
+  activeLanguages: ['fi', 'en']
+});
+
+const result = checker.analyze('correct-horse-battery-staple', { locale: 'en' });
+console.log(result.score, result.label, result.riskFlags);
+```
+
+> Tip: Use this as a UX guidance layer in frontend flows, not as a standalone auth control.
+
 ## What this library does
 
 `password-checker` evaluates password guessability with a practical, browser-friendly model:
@@ -254,6 +277,15 @@ Known limitations:
 - Scoring logic is practical, not a formal cryptographic crack-time simulator
 - Bloom filters may introduce probabilistic noise depending on configuration
 - API may still evolve before 1.0
+
+## Roadmap to broader production readiness
+
+Near-term priorities:
+- Expand Finnish word coverage to reduce under-detection of common compounds
+- Improve passphrase/repetition balancing for long, human-readable multi-word inputs
+- Add richer regression matrix for multilingual edge cases and policy consistency
+- Stabilize API contracts and mark 1.0 freeze criteria explicitly
+- Add benchmark/profile docs (browser/runtime footprint and tuning guidance)
 
 ### Passphrase behavior
 

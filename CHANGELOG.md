@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## 0.1.3
+- Add configurable scoring overrides (`scoring`) for penalties, bonuses, thresholds, and label bands
+- Expand keyboard/sequence run detection beyond the narrow regex pattern
+- Add i18n override support for labels/tips/errors via config (`i18n`)
+- Remove stale inline tuning comments from scoring internals and document score override usage in README
+- Extend test coverage for sequence detection, scoring overrides, and i18n label overrides
+
 ## 0.1.2
 - Apply baseline entropy multiplier `0.8` to reduce over-scoring of human-readable compounds
 - Harden Bloom pipeline with NFKC normalization, config validation, and decoded payload size sanity checks

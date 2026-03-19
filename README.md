@@ -197,14 +197,34 @@ console.log(checker.analyze('passwordaurinko', { locale: 'fi' }));
 - `dictionaryWordCount`: distinct dictionary words detected in the password
 - `scoreBreakdown.bonuses.passphrase`: uplift applied to strong multi-word passphrases
 
-### 3) Language switching at runtime
+### 3) Optional scoring config overrides
+
+You can tune scoring factors (for example from your factor-tuning workflow) via `scoring` config:
+
+```js
+const checker = new PasswordDefenseCore({
+  defaultLanguage: bloom.defaultLanguage,
+  locale: 'en',
+  languages: bloom.languages,
+  activeLanguages: ['fi', 'en'],
+  scoring: {
+    baselineMultiplier: 0.8,
+    penalties: {
+      sequence: 24,
+      year: 32
+    }
+  }
+});
+```
+
+### 4) Language switching at runtime
 
 ```js
 checker.setLocale('fi');
 checker.setActiveLanguages(['fi']);
 ```
 
-### 4) Optional HaveIBeenPwned (HIBP) check
+### 5) Optional HaveIBeenPwned (HIBP) check
 
 ```js
 const checker = new PasswordDefenseCore({

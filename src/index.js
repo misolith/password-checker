@@ -28,9 +28,47 @@ const I18N = {
 };
 
 const ASCII_LETTER_RUN_RE = /[A-Za-z]+/g;
+const KEYBOARD_ROWS = ['qwertyuiop', 'asdfghjkl', 'zxcvbnm', '1234567890'];
 
 export class PasswordDefenseCore {
+  static DEFAULT_SCORING = {
+    baselineMultiplier: 0.8,
+    penalties: {
+      repetitionScale: 80,
+      sequence: 20,
+      shortLength: 24,
+      year: 36,
+      dictionary: { one: 40, two: 35, many: 15, passphraseDiscount: 10, passphraseMin: 10 },
+      predictablePhrase: 35
+    },
+    bonuses: {
+      passphraseBase: 18,
+      fourWordMultiplier: 2,
+      longLength: 8,
+      separators: 4,
+      max: 60,
+      predictableFactor: 0.35,
+      predictableMin: 6
+    },
+    thresholds: {
+      shortLength: 12,
+      passphraseLength: 16,
+      passphraseLongLength: 24,
+      passphraseCoverage: 0.6,
+      wordOnlyPassphraseWords: 3
+    },
+    labels: {
+      moderate: 40,
+      good: 70,
+      strong: 85
+    }
+  };
+
   constructor(cfg = {}) {
+    this.i18n = {
+      ...I18N,
+      ...(cfg.i18n || {})
+    };
     this.defaultLanguage = cfg.defaultLanguage || 'en';
     this.locale = cfg.locale || 'en';
     this.activeLanguages = cfg.activeLanguages || [this.defaultLanguage];
@@ -39,6 +77,30 @@ export class PasswordDefenseCore {
       enabled: !!cfg.hibp?.enabled,
       endpoint: cfg.hibp?.endpoint || 'https://api.pwnedpasswords.com/range/',
       timeoutMs: Number(cfg.hibp?.timeoutMs || 6000)
+    };
+    this.scoring = {
+      ...PasswordDefenseCore.DEFAULT_SCORING,
+      ...(cfg.scoring || {}),
+      penalties: {
+        ...PasswordDefenseCore.DEFAULT_SCORING.penalties,
+        ...(cfg.scoring?.penalties || {}),
+        dictionary: {
+          ...PasswordDefenseCore.DEFAULT_SCORING.penalties.dictionary,
+          ...(cfg.scoring?.penalties?.dictionary || {})
+        }
+      },
+      bonuses: {
+        ...PasswordDefenseCore.DEFAULT_SCORING.bonuses,
+        ...(cfg.scoring?.bonuses || {})
+      },
+      thresholds: {
+        ...PasswordDefenseCore.DEFAULT_SCORING.thresholds,
+        ...(cfg.scoring?.thresholds || {})
+      },
+      labels: {
+        ...PasswordDefenseCore.DEFAULT_SCORING.labels,
+        ...(cfg.scoring?.labels || {})
+      }
     };
     this.state = {};
     for (const [lang, lc] of Object.entries(this.languages)) {
@@ -57,11 +119,11 @@ export class PasswordDefenseCore {
   }
 
   resolveLocale(locale) {
-    return I18N[locale] ? locale : 'en';
+    return this.i18n[locale] ? locale : 'en';
   }
 
   t(path, locale = this.locale) {
-    const dict = I18N[this.resolveLocale(locale)] || I18N.en;
+    const dict = this.i18n[this.resolveLocale(locale)] || this.i18n.en;
     return path.split('.').reduce((acc, k) => (acc && acc[k] !== undefined ? acc[k] : null), dict) || path;
   }
 
@@ -208,6 +270,7 @@ export class PasswordDefenseCore {
   }
 
   assessPassphrase(password, matchedParts = []) {
+    const { bonuses, thresholds } = this.scoring;
     if (matchedParts.length < 2) {
       return { qualifies: false, words: 0, separators: 0, coverage: 0, bonus: 0, strategy: matchedParts.length === 1 ? 'word_based' : 'random' };
     }
@@ -218,18 +281,17 @@ export class PasswordDefenseCore {
     const letterChars = this.getLetterRuns(password).reduce((sum, run) => sum + run.text.length, 0);
     const coveredChars = matchedParts.reduce((sum, match) => sum + match.len, 0);
     const coverage = letterChars > 0 ? coveredChars / letterChars : 0;
-    const longEnough = password.length >= 16;
-    const enoughWords = uniqueWords.length >= 3 || (uniqueWords.length >= 2 && password.length >= 24 && separators >= 1);
-    const qualifies = longEnough && enoughWords && coverage >= 0.6;
+    const longEnough = password.length >= thresholds.passphraseLength;
+    const enoughWords = uniqueWords.length >= 3 || (uniqueWords.length >= 2 && password.length >= thresholds.passphraseLongLength && separators >= 1);
+    const qualifies = longEnough && enoughWords && coverage >= thresholds.passphraseCoverage;
 
     let bonus = 0;
     if (qualifies) {
-      // 3-word passphrase gets baseline uplift; 4+ words doubles the phrase uplift.
-      bonus = 18;
-      if (uniqueWords.length >= 4) bonus *= 2;
-      if (password.length >= 24) bonus += 8;
-      if (separators >= 2) bonus += 4;
-      bonus = Math.min(60, bonus);
+      bonus = bonuses.passphraseBase;
+      if (uniqueWords.length >= 4) bonus *= bonuses.fourWordMultiplier;
+      if (password.length >= thresholds.passphraseLongLength) bonus += bonuses.longLength;
+      if (separators >= 2) bonus += bonuses.separators;
+      bonus = Math.min(bonuses.max, bonus);
     }
 
     let strategy = 'mixed';
@@ -284,6 +346,36 @@ export class PasswordDefenseCore {
     }
   }
 
+  hasKeyboardOrSequentialRun(password) {
+    const input = this.normalizeToken(password || '');
+    if (!input) return false;
+
+    const runs = [];
+    for (const row of KEYBOARD_ROWS) {
+      runs.push(row, row.split('').reverse().join(''));
+    }
+    runs.push('abcdefghijklmnopqrstuvwxyz', 'zyxwvutsrqponmlkjihgfedcba');
+
+    for (const run of runs) {
+      for (let i = 0; i <= run.length - 3; i++) {
+        const seq = run.slice(i, i + 3);
+        if (input.includes(seq)) return true;
+      }
+    }
+
+    const chars = input.split('');
+    for (let i = 0; i < chars.length - 2; i++) {
+      const a = chars[i].charCodeAt(0);
+      const b = chars[i + 1].charCodeAt(0);
+      const c = chars[i + 2].charCodeAt(0);
+      if ((b - a === 1 && c - b === 1) || (b - a === -1 && c - b === -1)) {
+        if (/^[a-z0-9]{3}$/.test(chars.slice(i, i + 3).join(''))) return true;
+      }
+    }
+
+    return false;
+  }
+
   async analyzeAsync(pw, options = {}) {
     const locale = this.resolveLocale(options.locale || this.locale);
     const base = this.analyze(pw, { ...options, locale });
@@ -312,12 +404,14 @@ export class PasswordDefenseCore {
     const locale = this.resolveLocale(options.locale || this.locale);
     if (!pw) return { score: 0, label: this.t('labels.weak', locale), tips: [this.t('tips.empty', locale)] };
 
+    const { penalties, bonuses, thresholds, labels, baselineMultiplier } = this.scoring;
+
     let charsetSize = 0;
     if (/[a-z]/.test(pw)) charsetSize += 26;
     if (/[A-Z]/.test(pw)) charsetSize += 26;
     if (/[0-9]/.test(pw)) charsetSize += 10;
     if (/[^A-Za-z0-9]/.test(pw)) charsetSize += 33;
-    const baselineScore = ((pw.length * Math.log2(charsetSize || 1) / 80) * 100) * 0.8;
+    const baselineScore = ((pw.length * Math.log2(charsetSize || 1) / 80) * 100) * baselineMultiplier;
     let score = baselineScore;
 
     let penalty = 0;
@@ -328,32 +422,30 @@ export class PasswordDefenseCore {
     if (pw.length > 6) {
       const ratio = uniqueChars / pw.length;
       if (ratio <= 0.6) {
-        const p = Math.round((1 - ratio) * 80);
+        const p = Math.round((1 - ratio) * penalties.repetitionScale);
         penalty += p;
         penaltyBreakdown.repetition += p;
         riskFlags.push('repetition');
         tips.push(this.t('tips.repetition', locale));
       }
     }
-    if (/(123|abc|qwe|asd|zxc|321|cba|ewq)/i.test(pw)) {
-      penalty += 20;
-      penaltyBreakdown.sequence += 20;
+    if (this.hasKeyboardOrSequentialRun(pw)) {
+      penalty += penalties.sequence;
+      penaltyBreakdown.sequence += penalties.sequence;
       riskFlags.push('sequence');
       tips.push(this.t('tips.sequence', locale));
     }
 
-    // Short passwords are easier to brute-force even with decoration/leetspeak.
-    if (pw.length < 12) {
-      penalty += 24; // 1.5x from prior 16
-      penaltyBreakdown.shortLength += 24;
+    if (pw.length < thresholds.shortLength) {
+      penalty += penalties.shortLength;
+      penaltyBreakdown.shortLength += penalties.shortLength;
       riskFlags.push('short_length');
       tips.push(this.t('tips.short', locale));
     }
 
-    // Year-like patterns are highly predictable (e.g. name + 2026 + !)
     if (/(?:19\d{2}|20\d{2})/.test(pw)) {
-      penalty += 36; // doubled year penalty
-      penaltyBreakdown.year += 36;
+      penalty += penalties.year;
+      penaltyBreakdown.year += penalties.year;
       riskFlags.push('year_pattern');
       tips.push(this.t('tips.year', locale));
     }
@@ -368,13 +460,13 @@ export class PasswordDefenseCore {
     const matchedLetterCount = matchedParts.reduce((sum, m) => sum + m.len, 0);
     const dictionaryCoverage = letterCount > 0 ? matchedLetterCount / letterCount : 0;
 
-    if (dictionaryMatches === 1) penaltyBreakdown.dictionary += 40;
-    else if (dictionaryMatches === 2) penaltyBreakdown.dictionary += 35;
-    else if (dictionaryMatches > 2) penaltyBreakdown.dictionary += 15;
+    if (dictionaryMatches === 1) penaltyBreakdown.dictionary += penalties.dictionary.one;
+    else if (dictionaryMatches === 2) penaltyBreakdown.dictionary += penalties.dictionary.two;
+    else if (dictionaryMatches > 2) penaltyBreakdown.dictionary += penalties.dictionary.many;
 
     if (penaltyBreakdown.dictionary > 0) {
       if (passphrase.qualifies) {
-        penaltyBreakdown.dictionary = Math.max(10, penaltyBreakdown.dictionary - 10);
+        penaltyBreakdown.dictionary = Math.max(penalties.dictionary.passphraseMin, penaltyBreakdown.dictionary - penalties.dictionary.passphraseDiscount);
       }
       penalty += penaltyBreakdown.dictionary;
       riskFlags.push('dictionary_pattern');
@@ -383,9 +475,9 @@ export class PasswordDefenseCore {
     // If phrase is almost entirely common dictionary words, keep score realistic.
     const wordOnlyCompositionRe = this.createUnicodeRegex("^[\\p{L}\\-_'\\s]+$", 'u') || /^[A-Za-zÅÄÖåäö\-_'\s]+$/;
     const wordOnlyComposition = wordOnlyCompositionRe.test(pw);
-    const isPredictablePhrase = passphrase.qualifies && (dictionaryCoverage >= 0.9 || (wordOnlyComposition && passphrase.words >= 3));
+    const isPredictablePhrase = passphrase.qualifies && (dictionaryCoverage >= 0.9 || (wordOnlyComposition && passphrase.words >= thresholds.wordOnlyPassphraseWords));
     if (isPredictablePhrase) {
-      penaltyBreakdown.predictablePhrase = 35;
+      penaltyBreakdown.predictablePhrase = penalties.predictablePhrase;
       penalty += penaltyBreakdown.predictablePhrase;
       riskFlags.push('predictable_phrase');
       tips.push(this.t('tips.phrase', locale));
@@ -394,19 +486,17 @@ export class PasswordDefenseCore {
     const bonusBreakdown = { passphrase: 0 };
     if (passphrase.qualifies && !riskFlags.includes('sequence') && !riskFlags.includes('year_pattern')) {
       bonusBreakdown.passphrase = isPredictablePhrase
-        ? Math.max(6, Math.round(passphrase.bonus * 0.35))
+        ? Math.max(bonuses.predictableMin, Math.round(passphrase.bonus * bonuses.predictableFactor))
         : passphrase.bonus;
     }
 
     const rawScore = Math.max(0, Math.min(100, Math.round(score - penalty + bonusBreakdown.passphrase)));
 
-    // Base label by score band
     let labelKey = 'weak';
-    if (rawScore >= 85) labelKey = 'strong';
-    else if (rawScore >= 70) labelKey = 'good';
-    else if (rawScore >= 40) labelKey = 'moderate';
+    if (rawScore >= labels.strong) labelKey = 'strong';
+    else if (rawScore >= labels.good) labelKey = 'good';
+    else if (rawScore >= labels.moderate) labelKey = 'moderate';
 
-    // Conservative cap: predictable structure cannot be labeled too high
     const hasCriticalRisk = riskFlags.includes('year_pattern') || riskFlags.includes('dictionary_pattern') || riskFlags.includes('sequence');
     if (hasCriticalRisk && (labelKey === 'strong' || labelKey === 'good')) {
       labelKey = passphrase.qualifies && !riskFlags.includes('year_pattern') && !riskFlags.includes('sequence') ? 'good' : 'moderate';

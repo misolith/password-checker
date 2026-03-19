@@ -100,3 +100,46 @@ test('bloom payload size mismatch throws clear error', () => {
 
   assert.throws(() => core.checkBloom('password', { languages: ['en'] }), /Bloom payload size mismatch/);
 });
+
+test('sequence detection catches broader keyboard runs', () => {
+  const core = mkCore();
+  const r = core.analyze('poiuy');
+  assert.ok(r.riskFlags?.includes('sequence'));
+});
+
+test('scoring penalties can be overridden via config', () => {
+  const core = new PasswordDefenseCore({
+    defaultLanguage: bloom.defaultLanguage,
+    locale: 'en',
+    languages: bloom.languages,
+    activeLanguages: ['fi', 'en'],
+    scoring: {
+      penalties: {
+        year: 0
+      }
+    }
+  });
+
+  const withYearPenalty = mkCore().analyze('Miso2026!').score;
+  const withoutYearPenalty = core.analyze('Miso2026!').score;
+  assert.ok(withoutYearPenalty >= withYearPenalty);
+});
+
+test('labels support i18n overrides', () => {
+  const core = new PasswordDefenseCore({
+    defaultLanguage: bloom.defaultLanguage,
+    locale: 'sv',
+    languages: bloom.languages,
+    activeLanguages: ['fi', 'en'],
+    i18n: {
+      sv: {
+        labels: { weak: 'Svag', moderate: 'Måttlig', good: 'Bra', strong: 'Stark', dangerous: 'FARLIG' },
+        tips: { empty: 'Ange ett lösenord.' },
+        errors: { noDecoder: 'Ingen avkodare.' }
+      }
+    }
+  });
+
+  const r = core.analyze('');
+  assert.equal(r.label, 'Svag');
+});

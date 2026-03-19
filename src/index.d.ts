@@ -1,4 +1,4 @@
-export type Locale = 'fi' | 'en';
+export type Locale = string;
 
 export interface HibpOptions {
   enabled?: boolean;
@@ -13,12 +13,53 @@ export interface BloomLanguageConfig {
   data: string;
 }
 
+export interface ScoringConfig {
+  baselineMultiplier?: number;
+  penalties?: {
+    repetitionScale?: number;
+    sequence?: number;
+    shortLength?: number;
+    year?: number;
+    predictablePhrase?: number;
+    dictionary?: {
+      one?: number;
+      two?: number;
+      many?: number;
+      passphraseDiscount?: number;
+      passphraseMin?: number;
+    };
+  };
+  bonuses?: {
+    passphraseBase?: number;
+    fourWordMultiplier?: number;
+    longLength?: number;
+    separators?: number;
+    max?: number;
+    predictableFactor?: number;
+    predictableMin?: number;
+  };
+  thresholds?: {
+    shortLength?: number;
+    passphraseLength?: number;
+    passphraseLongLength?: number;
+    passphraseCoverage?: number;
+    wordOnlyPassphraseWords?: number;
+  };
+  labels?: {
+    moderate?: number;
+    good?: number;
+    strong?: number;
+  };
+}
+
 export interface PasswordCheckerConfig {
   defaultLanguage?: string;
   locale?: Locale;
   activeLanguages?: string[];
   languages: Record<string, BloomLanguageConfig>;
   hibp?: HibpOptions;
+  scoring?: ScoringConfig;
+  i18n?: Record<string, { labels?: Record<string, string>; tips?: Record<string, string>; errors?: Record<string, string> }>;
 }
 
 export interface AnalyzeResult {

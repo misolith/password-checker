@@ -36,8 +36,14 @@ export class PasswordDefenseCore {
     penalties: {
       repetitionScale: 80,
       sequence: 20,
+      sequenceWithWordPattern: 8,
+      sequenceWithDictionary: 4,
+      sequenceWithPredictablePhrase: 8,
       shortLength: 24,
       year: 36,
+      yearWithWordPattern: 20,
+      yearWithDictionary: 4,
+      yearWithPredictablePhrase: 8,
       dictionary: { one: 40, two: 35, many: 15, passphraseDiscount: 10, passphraseMin: 10 },
       predictablePhrase: 35
     },
@@ -481,6 +487,33 @@ export class PasswordDefenseCore {
       penalty += penaltyBreakdown.predictablePhrase;
       riskFlags.push('predictable_phrase');
       tips.push(this.t('tips.phrase', locale));
+    }
+
+    const hasDelimitedWords = letterRuns.length >= 2
+      && ((this.createUnicodeRegex('[^0-9\\p{L}]+', 'u') || /[^0-9A-Za-z]+/).test(pw));
+
+    let extraYearPenalty = 0;
+    let extraSequencePenalty = 0;
+    if (hasDelimitedWords) {
+      extraYearPenalty = Math.max(extraYearPenalty, penalties.yearWithWordPattern);
+      extraSequencePenalty = Math.max(extraSequencePenalty, penalties.sequenceWithWordPattern);
+    }
+    if (dictionaryMatches >= 2) {
+      extraYearPenalty = Math.max(extraYearPenalty, penalties.yearWithDictionary);
+      extraSequencePenalty = Math.max(extraSequencePenalty, penalties.sequenceWithDictionary);
+    }
+    if (isPredictablePhrase) {
+      extraYearPenalty = Math.max(extraYearPenalty, penalties.yearWithPredictablePhrase);
+      extraSequencePenalty = Math.max(extraSequencePenalty, penalties.sequenceWithPredictablePhrase);
+    }
+
+    if (riskFlags.includes('year_pattern') && extraYearPenalty > 0) {
+      penalty += extraYearPenalty;
+      penaltyBreakdown.year += extraYearPenalty;
+    }
+    if (riskFlags.includes('sequence') && extraSequencePenalty > 0) {
+      penalty += extraSequencePenalty;
+      penaltyBreakdown.sequence += extraSequencePenalty;
     }
 
     const bonusBreakdown = { passphrase: 0 };

@@ -16,41 +16,41 @@ function mkCore() {
 
 const CASES = [
   // very weak / predictable
-  { pw: '123456', min: 0, max: 25 },
-  { pw: 'qwerty', min: 0, max: 25 },
-  { pw: 'password', min: 0, max: 45 },
-  { pw: 'Password123', min: 0, max: 45 },
-  { pw: 'Kissa2026!', min: 0, max: 50 },
-  { pw: 'Kissa-koira-marsu', min: 30, max: 88 },
-  { pw: 'Kissa-koira-marsu-lehmä', min: 50, max: 90 },
+  { pw: '123456', min: 0, max: 10 },
+  { pw: 'qwerty', min: 0, max: 10 },
+  { pw: 'password', min: 0, max: 10 },
+  { pw: 'Password123', min: 0, max: 10 },
+  { pw: 'Kissa2026!', min: 0, max: 10 },
+  { pw: 'Kissa-koira-marsu', min: 30, max: 50 },
+  { pw: 'Kissa-koira-marsu-lehmä', min: 70, max: 85 },
   // corner: long + mixed random tail should not collapse to weak
-  { pw: 'Kissa-ajaa-autolla-kovaa-eirbfkdlwwwiwiqiii€7u66(((', min: 60, max: 100 },
+  { pw: 'Kissa-ajaa-autolla-kovaa-eirbfkdlwwwiwiqiii€7u66(((', min: 90, max: 100 },
 
   // weak -> moderate
-  { pw: 'Miso2026!', min: 0, max: 65 },
-  { pw: 'Tr1xL1th', min: 0, max: 55 },
-  { pw: 'AutoAjaa2026!', min: 10, max: 60 },
-  { pw: 'lintulentaa', min: 0, max: 65 },
-  { pw: 'liikennevalo', min: 15, max: 60 },
-  { pw: 'testi-testi', min: 0, max: 45 },
+  { pw: 'Miso2026!', min: 0, max: 10 },
+  { pw: 'Tr1xL1th', min: 20, max: 35 },
+  { pw: 'AutoAjaa2026!', min: 5, max: 20 },
+  { pw: 'lintulentaa', min: 0, max: 10 },
+  { pw: 'liikennevalo', min: 15, max: 30 },
+  { pw: 'testi-testi', min: 0, max: 10 },
 
   // moderate
-  { pw: 'CoffeeMugRiver7', min: 45, max: 100 },
-  { pw: 'Solar-Bridge-19', min: 45, max: 100 },
-  { pw: 'north:river:stone', min: 25, max: 100 },
-  { pw: 'Metsa!Joki!Taivas', min: 45, max: 100 },
-  { pw: 'Harbor_Owl_Quartz9', min: 50, max: 100 },
-  { pw: 'aurinko-joki-kettu-metsa-cosmos', min: 60, max: 100 },
-  { pw: 'correct-horse-battery-staple', min: 60, max: 100 },
+  { pw: 'CoffeeMugRiver7', min: 45, max: 60 },
+  { pw: 'Solar-Bridge-19', min: 55, max: 70 },
+  { pw: 'north:river:stone', min: 25, max: 40 },
+  { pw: 'Metsa!Joki!Taivas', min: 60, max: 75 },
+  { pw: 'Harbor_Owl_Quartz9', min: 70, max: 85 },
+  { pw: 'aurinko-joki-kettu-metsa-cosmos', min: 80, max: 90 },
+  { pw: 'correct-horse-battery-staple', min: 80, max: 90 },
 
   // stronger random-ish
-  { pw: 'x7$Qp2!mR9#tV4', min: 70, max: 100 },
-  { pw: 'vT9!mK2#rP7$zD4', min: 70, max: 100 },
+  { pw: 'x7$Qp2!mR9#tV4', min: 88, max: 96 },
+  { pw: 'vT9!mK2#rP7$zD4', min: 95, max: 100 },
   // corner: short random can be high but should not exceed sensible ceiling too easily
-  { pw: 'xK9!qP2$', min: 25, max: 95 },
-  { pw: 'R9$kP2!vT7#mL4@q', min: 75, max: 100 },
-  { pw: 'N4!qZ8@vP2#rT7$mK5', min: 75, max: 100 },
-  { pw: 'cA9!tQ2#vL7$mR4@pZ8%', min: 80, max: 100 }
+  { pw: 'xK9!qP2$', min: 25, max: 35 },
+  { pw: 'R9$kP2!vT7#mL4@q', min: 98, max: 100 },
+  { pw: 'N4!qZ8@vP2#rT7$mK5', min: 98, max: 100 },
+  { pw: 'cA9!tQ2#vL7$mR4@pZ8%', min: 98, max: 100 }
 ];
 
 test('score regression ranges stay stable-ish across updates', () => {

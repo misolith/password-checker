@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+## 0.1.4
+- Tighten scoring guardrails for weak word+year and word+sequence patterns
+- Add scoring invariant tests to keep weak predictable passwords near zero and random mixed passwords strong
+- Strengthen regression ranges to better protect future score tuning
+
 ## 0.1.3
 - Add configurable scoring overrides (`scoring`) for penalties, bonuses, thresholds, and label bands
 - Expand keyboard/sequence run detection beyond the narrow regex pattern

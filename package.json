@@ -1,6 +1,6 @@
 {
   "name": "@misok/password-checker",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Multilingual password analysis with Bloom filtering and optional HIBP checks",
   "type": "module",
   "main": "src/index.js",
